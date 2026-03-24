@@ -2,6 +2,9 @@
 builder = "nixpacks"
 buildCommand = "npm install --legacy-peer-deps && npm run build"
 
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["nodejs_20", "nodePackages.pnpm"]
+
 [deploy]
 startCommand = "npm run start"
 healthcheckPath = "/api/health"
