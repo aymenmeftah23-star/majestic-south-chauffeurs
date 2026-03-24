@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +27,7 @@ export default function CreateQuote() {
 
   const createMutation = trpc.quotes.create.useMutation({
     onSuccess: () => navigate('/quotes'),
-    onError: (err) => alert('Erreur : ' + err.message),
+    onError: (err) => toast.error('Erreur : ' + err.message),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -41,8 +42,8 @@ export default function CreateQuote() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.demandId) { alert('Veuillez sélectionner une demande'); return; }
-    if (!formData.priceHT || priceHT <= 0) { alert('Veuillez saisir le montant HT'); return; }
+    if (!formData.demandId) { toast.error('Veuillez sélectionner une demande'); return; }
+    if (!formData.priceHT || priceHT <= 0) { toast.error('Veuillez saisir le montant HT'); return; }
 
     const quoteNumber = 'DEV-' + Date.now();
     createMutation.mutate({

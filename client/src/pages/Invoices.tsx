@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -53,7 +54,7 @@ export default function Invoices() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert('Erreur lors de la génération du PDF');
+      toast.error('Erreur lors de la génération du PDF');
     }
   };
 

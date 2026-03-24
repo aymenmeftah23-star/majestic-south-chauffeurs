@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,10 +30,10 @@ export default function QuoteDetail() {
   const deleteMutation = trpc.quotes.delete.useMutation({ onSuccess: () => navigate('/quotes') });
   const convertMutation = trpc.quotes.convertToMission.useMutation({
     onSuccess: (data) => {
-      alert('Mission creee : ' + data.missionNumber);
+      toast.success('Mission créée : ' + data.missionNumber);
       navigate('/missions');
     },
-    onError: (err) => alert('Erreur : ' + err.message),
+    onError: (err) => toast.error('Erreur : ' + err.message),
   });
 
   if (isLoading) return (

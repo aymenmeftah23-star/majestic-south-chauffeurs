@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState, useCallback } from 'react';
 import { useLocation } from "wouter";
 import { MapPin, Users, CheckCircle, ChevronRight, ChevronLeft, Car, Calendar, Clock, Phone, Mail, User, Shield, Star, Plane, Briefcase, Sparkles, Timer, Compass, MoreHorizontal, Route, Plus, Trash2, Loader2 } from "lucide-react";
@@ -114,7 +115,7 @@ export default function BookingForm() {
 
   const submitBooking = trpc.booking.submit.useMutation({
     onSuccess: (result) => { setRefNumber(result.refNumber); setSubmitted(true); },
-    onError: (err) => alert('Erreur lors de l\'envoi : ' + err.message),
+    onError: (err) => toast.error('Erreur lors de l\'envoi : ' + err.message),
   });
 
   const update = (field: keyof BookingData, value: any) => setData(prev => ({ ...prev, [field]: value }));
@@ -149,8 +150,8 @@ export default function BookingForm() {
   };
 
   const handleSubmit = () => {
-    if (!data.email || !data.phone) { alert('Veuillez renseigner votre email et téléphone.'); return; }
-    if (!data.origin || !data.destination) { alert('Veuillez renseigner les adresses de départ et d\'arrivée.'); return; }
+    if (!data.email || !data.phone) { toast.error('Veuillez renseigner votre email et téléphone.'); return; }
+    if (!data.origin || !data.destination) { toast.error('Veuillez renseigner les adresses de départ et d\'arrivée.'); return; }
     const stopsText = data.stops.length > 0
       ? '\n' + data.stops.map((s, i) => `Étape ${i + 1} : ${s.address}${s.time ? ' à ' + s.time : ''}`).join('\n')
       : '';

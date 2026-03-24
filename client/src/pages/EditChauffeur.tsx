@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -51,7 +52,7 @@ export default function EditChauffeur() {
 
   const updateMutation = trpc.chauffeurs.update.useMutation({
     onSuccess: () => navigate(`/chauffeurs/${id}`),
-    onError: (err) => alert('Erreur : ' + err.message),
+    onError: (err) => toast.error('Erreur : ' + err.message),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

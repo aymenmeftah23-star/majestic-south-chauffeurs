@@ -51,10 +51,28 @@ const navGroups = [
     ]
   },
   {
+    label: "Suivi & Communication",
+    items: [
+      { path: "/gps-tracking", label: "GPS Tracking", icon: MapPin },
+      { path: "/chat", label: "Messagerie", icon: MessageSquare },
+      { path: "/reviews", label: "Avis Clients", icon: Star },
+    ]
+  },
+  {
+    label: "Fidélisation",
+    items: [
+      { path: "/bonuses", label: "Primes Chauffeurs", icon: Gift },
+      { path: "/promo-codes", label: "Codes Promo", icon: Tag },
+      { path: "/client-portal", label: "Espace Client", icon: Users },
+    ]
+  },
+  {
     label: "Systeme",
     items: [
       { path: "/alerts", label: "Alertes", icon: Bell },
       { path: "/history", label: "Historique", icon: History },
+      { path: "/audit-trail", label: "Journal d'audit", icon: Shield },
+      { path: "/support", label: "Support", icon: Wrench },
       { path: "/settings", label: "Parametres", icon: Settings },
     ]
   }

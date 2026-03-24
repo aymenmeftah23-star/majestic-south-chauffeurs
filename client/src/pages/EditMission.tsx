@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,7 +103,7 @@ export default function EditMission() {
 
   const updateMutation = trpc.missions.update.useMutation({
     onSuccess: () => navigate(`/missions/${id}`),
-    onError: (err) => alert('Erreur : ' + err.message),
+    onError: (err) => toast.error('Erreur : ' + err.message),
   });
 
   const computeRoute = async (origin: string, dest: string) => {
@@ -162,7 +163,7 @@ export default function EditMission() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.clientId) { alert('Veuillez sélectionner un client'); return; }
+    if (!formData.clientId) { toast.error('Veuillez sélectionner un client'); return; }
     const stopsNote = stops.length > 0
       ? '\nÉtapes : ' + stops.map((s, i) => `${i + 1}. ${s.address}${s.time ? ' à ' + s.time : ''}${s.note ? ' (' + s.note + ')' : ''}`).join(' | ')
       : '';

@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -41,7 +42,7 @@ export default function EditClient() {
 
   const updateMutation = trpc.clients.update.useMutation({
     onSuccess: () => navigate(`/clients/${id}`),
-    onError: (err) => alert('Erreur : ' + err.message),
+    onError: (err) => toast.error('Erreur : ' + err.message),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,7 +61,7 @@ export default function CreateMission() {
 
   const createMutation = trpc.missions.create.useMutation({
     onSuccess: () => navigate('/missions'),
-    onError: (err) => alert('Erreur : ' + err.message),
+    onError: (err) => toast.error('Erreur : ' + err.message),
   });
 
   // Calcul automatique de l'itinéraire (distance + durée uniquement)
@@ -143,9 +144,9 @@ export default function CreateMission() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.clientId) { alert('Veuillez sélectionner un client'); return; }
-    if (!formData.origin) { alert('Veuillez saisir une adresse de départ'); return; }
-    if (!formData.destination) { alert('Veuillez saisir une adresse d\'arrivée'); return; }
+    if (!formData.clientId) { toast.error('Veuillez sélectionner un client'); return; }
+    if (!formData.origin) { toast.error('Veuillez saisir une adresse de départ'); return; }
+    if (!formData.destination) { toast.error('Veuillez saisir une adresse d\'arrivée'); return; }
 
     const stopsNote = stops.length > 0
       ? '\nÉtapes : ' + stops.map((s, i) => `${i + 1}. ${s.address}${s.time ? ' à ' + s.time : ''}${s.note ? ' (' + s.note + ')' : ''}`).join(' | ')
