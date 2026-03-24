@@ -5,10 +5,11 @@ RUN npm install -g pnpm@10.4.1
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances
+# Copier les fichiers de dependances ET les patches
 COPY package.json pnpm-lock.yaml ./
+COPY patches/ ./patches/
 
-# Installer les dépendances (sans frozen-lockfile pour éviter les conflits de cache)
+# Installer les dependances (sans frozen-lockfile pour eviter les conflits de cache)
 RUN pnpm install --no-frozen-lockfile
 
 # Copier le reste du code
@@ -20,5 +21,5 @@ RUN pnpm run build
 # Exposer le port
 EXPOSE 3000
 
-# Démarrer l'application
+# Demarrer l'application
 CMD ["pnpm", "run", "start"]
