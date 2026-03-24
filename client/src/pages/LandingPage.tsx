@@ -10,10 +10,12 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const services = [
-    { icon: Car, title: "Transferts Aéroport", desc: "Prise en charge et dépose dans tous les aéroports de la région. Suivi des vols en temps réel." },
-    { icon: Users, title: "Événements Privés", desc: "Mariages, galas, soirées VIP. Nous assurons votre transport avec discrétion et élégance." },
-    { icon: Award, title: "Voyages d'Affaires", desc: "Déplacements professionnels, roadshows, meetings. Ponctualité et confort garantis." },
-    { icon: Crown, title: "Mise à Disposition", desc: "Chauffeur à votre disposition pour la journée ou la demi-journée selon vos besoins." },
+    { icon: Car, title: "Transferts Aéroport", desc: "Prise en charge et dépose à Marseille-Provence (MRS), Nice (NCE), Toulon-Hyères (TLN) et autres aéroports régionaux. Suivi des vols en temps réel." },
+    { icon: MapPin, title: "Transferts Gare", desc: "Accueil personnalisé à Marseille Saint-Charles et Aix TGV. Ponctualité garantie pour tous vos trains." },
+    { icon: Award, title: "Voyages d'Affaires", desc: "Déplacements professionnels, roadshows, meetings. Ponctualité, discrétion et confort garantis." },
+    { icon: Crown, title: "Mise à Disposition", desc: "Chauffeur à votre disposition à l'heure, à la demi-journée ou à la journée pour vos besoins sur mesure en Provence et Côte d'Azur." },
+    { icon: Users, title: "Événements & Croisères", desc: "Mariages, galas, soirées VIP et transferts port de croisière Marseille. Prise en charge premium et bagages inclus." },
+    { icon: Shield, title: "Longue Distance", desc: "Trajets Marseille — Paris, Lyon, Monaco, Cannes et toute la France. Confort haut de gamme sur toute la distance." },
   ];
 
   const stats = [
@@ -30,10 +32,10 @@ export default function LandingPage() {
   ];
 
   const vehicles = [
-    { name: "Mercedes Classe V", category: "Van Premium", capacity: "7 passagers", Icon: Car },
-    { name: "Mercedes Classe E", category: "Berline Luxe", capacity: "3 passagers", Icon: Car },
-    { name: "BMW Série 7", category: "Berline Prestige", capacity: "3 passagers", Icon: Car },
-    { name: "Mercedes Sprinter", category: "Minibus VIP", capacity: "16 passagers", Icon: Users },
+    { name: "Mercedes Classe V", category: "Van Premium", capacity: "6 passagers + bagages", Icon: Car },
+    { name: "Mercedes Classe E", category: "Berline Business", capacity: "3 passagers", Icon: Car },
+    { name: "Mercedes Classe S", category: "Berline Prestige VIP", capacity: "3 passagers", Icon: Car },
+    { name: "Tesla Model Y", category: "Électrique Premium", capacity: "3 passagers éco", Icon: Car },
   ];
 
   return (
@@ -177,7 +179,7 @@ export default function LandingPage() {
             <p className="text-gray-400 max-w-xl mx-auto">Nous proposons une gamme complète de services de transport premium adaptés à tous vos besoins.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service) => (
               <div
                 key={service.title}
@@ -361,21 +363,40 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-black border-t border-amber-900/30 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="Majestic South" className="h-10 w-10 object-contain" />
-              <div>
-                <div className="font-bold text-sm tracking-widest" style={{color: '#d4af37'}}>MAJESTIC SOUTH</div>
-                <div className="text-xs text-gray-500 tracking-widest uppercase">Chauffeurs</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <img src="/logo.png" alt="Majestic South" className="h-10 w-10 object-contain" />
+                <div>
+                  <div className="font-bold text-sm tracking-widest" style={{color: '#d4af37'}}>MAJESTIC SOUTH</div>
+                  <div className="text-xs text-gray-500 tracking-widest uppercase">Chauffeurs</div>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">Service de chauffeur privé premium à Marseille et en région PACA. Disponible 24h/24 et 7j/7 sur réservation.</p>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-amber-400 tracking-widest uppercase mb-3">Informations légales</div>
+              <div className="text-xs text-gray-500 space-y-1">
+                <div>SAS Majestic South Chauffeurs</div>
+                <div>SIREN : 943 399 311 — RCS Marseille</div>
+                <div>Licence VTC : EVTC013250212</div>
+                <div>Assurance : HISCOX complète</div>
+                <div>TVA : FR39 943 399 311</div>
               </div>
             </div>
-            <div className="text-sm text-gray-500">
-              © 2026 Majestic South Chauffeurs. Tous droits réservés.
+            <div>
+              <div className="text-xs font-semibold text-amber-400 tracking-widest uppercase mb-3">Liens rapides</div>
+              <div className="space-y-2">
+                <a href="https://mschauffeur.fr" target="_blank" rel="noopener noreferrer" className="block text-xs text-gray-400 hover:text-amber-400">Site officiel — mschauffeur.fr</a>
+                <button onClick={() => setLocation('/booking')} className="block text-xs text-gray-400 hover:text-amber-400">Réserver en ligne</button>
+                <a href="tel:+33695618998" className="block text-xs text-gray-400 hover:text-amber-400">+33 6 95 61 89 98</a>
+                <a href="mailto:contact@mschauffeur.fr" className="block text-xs text-gray-400 hover:text-amber-400">contact@mschauffeur.fr</a>
+                <button onClick={() => setLocation('/login')} className="block text-xs text-gray-400 hover:text-amber-400">Espace admin</button>
+              </div>
             </div>
-            <div className="flex gap-6">
-              <button onClick={() => setLocation('/login')} className="text-sm text-gray-400 hover:text-amber-400">Connexion</button>
-              <button onClick={() => setLocation('/booking')} className="text-sm text-gray-400 hover:text-amber-400">Réservation</button>
-            </div>
+          </div>
+          <div className="border-t border-amber-900/20 pt-6 text-center text-xs text-gray-600">
+            © 2026 Majestic South Chauffeurs — Tous droits réservés — Bât D, 131 Bd de Saint-Loup, 13010 Marseille
           </div>
         </div>
       </footer>

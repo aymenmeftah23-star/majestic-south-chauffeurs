@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, MapPin, User, Car, Euro, Loader2, Trash2, FileText, CreditCard } from 'lucide-react';
+import { ArrowLeft, MapPin, User, Car, Euro, Loader2, Trash2, FileText, CreditCard, Pencil } from 'lucide-react';
 import { useLocation, useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
@@ -142,6 +142,10 @@ export default function MissionDetail() {
             <Button variant="outline" size="sm" className="border-amber-500 text-amber-700 hover:bg-amber-50" onClick={() => window.open(`/api/pdf/fiche/${id}`, '_blank')}>
               <FileText className="h-4 w-4 mr-1" />
               Fiche de mission
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/missions/${id}/edit`)}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Modifier
             </Button>
             <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleteMutation.isPending}>
               <Trash2 className="h-4 w-4" />

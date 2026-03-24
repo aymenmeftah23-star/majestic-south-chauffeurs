@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, Phone, Mail, MapPin, Globe, Loader2, Trash2, Car, FileText } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, MapPin, Globe, Loader2, Trash2, Car, FileText, Pencil } from 'lucide-react';
 import { useLocation, useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
@@ -101,6 +101,9 @@ export default function ChauffeurDetail() {
             <Badge className={`${STATUS_COLORS[status]} border px-3 py-1 text-sm font-medium`}>
               {STATUS_LABELS[status] || status}
             </Badge>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/chauffeurs/${id}/edit`)}>
+              <Pencil className="h-4 w-4 mr-1" /> Modifier
+            </Button>
             <Button
               variant="destructive"
               size="sm"

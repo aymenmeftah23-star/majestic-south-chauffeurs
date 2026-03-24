@@ -456,9 +456,10 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
   y += 20;
   doc.rect(50, y, doc.page.width - 100, 50).fill(LIGHT_GRAY);
   doc.fillColor(TEXT_DARK).fontSize(8).font("Helvetica")
-    .text("IBAN : FR76 XXXX XXXX XXXX XXXX XXXX XXX", 58, y + 10)
-    .text("BIC : XXXXXXXX  |  Banque : Crédit Agricole", 58, y + 26)
-    .text("Référence à indiquer : " + invoice.number, 58, y + 38);
+    .text("Titulaire : Majestic South Chauffeurs", 58, y + 8)
+    .text("IBAN : FR76 1695 8000 0148 6685 1389 063", 58, y + 22)
+    .text("BIC/SWIFT : QNTOFRP1XXX  |  Banque : Qonto — 18 rue de Navarin, 75009 Paris", 58, y + 36)
+    .text("Référence à indiquer : " + invoice.number, 58, y + 50);
   y += 60;
 
   // Footer

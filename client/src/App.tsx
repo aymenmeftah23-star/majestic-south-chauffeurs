@@ -39,6 +39,10 @@ import CreateQuote from "./pages/CreateQuote";
 import AuditTrail from "./pages/AuditTrail";
 import Webhooks from "./pages/Webhooks";
 import MissionDetail from "./pages/MissionDetail";
+import EditMission from "./pages/EditMission";
+import EditClient from "./pages/EditClient";
+import EditChauffeur from "./pages/EditChauffeur";
+import EditVehicle from "./pages/EditVehicle";
 import ChauffeurDetail from "./pages/ChauffeurDetail";
 import VehicleDetail from "./pages/VehicleDetail";
 import ClientDetail from "./pages/ClientDetail";
@@ -69,6 +73,7 @@ function Router() {
       {/* Missions */}
       <Route path={"/missions"} component={Missions} />
       <Route path={"/missions/new"} component={CreateMission} />
+      <Route path={"/missions/:id/edit"} component={EditMission} />
       <Route path={"/missions/:id"} component={MissionDetail} />
 
       {/* Quotes */}
@@ -79,16 +84,19 @@ function Router() {
       {/* Chauffeurs */}
       <Route path={"/chauffeurs"} component={Chauffeurs} />
       <Route path={"/chauffeurs/new"} component={CreateChauffeur} />
+      <Route path={"/chauffeurs/:id/edit"} component={EditChauffeur} />
       <Route path={"/chauffeurs/:id"} component={ChauffeurDetail} />
 
       {/* Vehicles */}
       <Route path={"/vehicles"} component={Vehicles} />
       <Route path={"/vehicles/new"} component={CreateVehicle} />
+      <Route path={"/vehicles/:id/edit"} component={EditVehicle} />
       <Route path={"/vehicles/:id"} component={VehicleDetail} />
 
       {/* Clients */}
       <Route path={"/clients"} component={Clients} />
       <Route path={"/clients/new"} component={CreateClient} />
+      <Route path={"/clients/:id/edit"} component={EditClient} />
       <Route path={"/clients/:id"} component={ClientDetail} />
 
       {/* Other modules */}

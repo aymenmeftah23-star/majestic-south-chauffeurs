@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, Phone, Mail, Building, MapPin, Loader2, Trash2, Star } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Building, MapPin, Loader2, Trash2, Star, Pencil } from 'lucide-react';
 import { useLocation, useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
@@ -72,6 +72,9 @@ export default function ClientDetail() {
           <div className="flex items-center gap-2">
             <Badge className={TYPE_COLORS[client.type || 'particulier']}>{TYPE_LABELS[client.type || 'particulier'] || client.type}</Badge>
             <Button size="sm" onClick={() => navigate('/missions/new')}>+ {t('missions.create')}</Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/clients/${id}/edit`)}>
+              <Pencil className="h-4 w-4 mr-1" /> Modifier
+            </Button>
             <Button variant="destructive" size="sm" onClick={() => confirm('Supprimer ?') && deleteMutation.mutate({ id })} disabled={deleteMutation.isPending}>
               <Trash2 className="h-4 w-4" />
             </Button>

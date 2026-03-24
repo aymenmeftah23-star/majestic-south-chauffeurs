@@ -351,9 +351,15 @@ export const appRouter = router({
     update: publicProcedure
       .input(z.object({
         id: z.number(),
+        clientId: z.number().optional(),
         chauffeurId: z.number().optional(),
         vehicleId: z.number().optional(),
+        type: z.string().optional(),
+        origin: z.string().optional(),
+        destination: z.string().optional(),
         date: z.string().optional(),
+        passengers: z.number().optional(),
+        luggage: z.number().optional(),
         price: z.number().optional(),
         priceHT: z.number().optional(),
         vatRate: z.number().optional(),

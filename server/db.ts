@@ -18,9 +18,10 @@ export const DEMO_CHAUFFEURS = [
   { id: 3, name: 'Karim Ouali', email: 'karim.o@majestic.com', phone: '+33 6 11 22 33 44', licenseNumber: 'VTC-2024-003', languages: 'Français, Anglais, Espagnol', status: 'disponible', notes: 'Multilingue', createdAt: new Date('2024-08-20') },
 ];
 export const DEMO_VEHICLES = [
-  { id: 1, brand: 'Mercedes', model: 'Classe E', licensePlate: 'AB-123-CD', year: 2023, category: 'berline', status: 'disponible', color: 'Noir', seats: 4, notes: 'Véhicule principal', nextMaintenance: new Date('2026-06-01') },
-  { id: 2, brand: 'BMW', model: 'Série 7', licensePlate: 'EF-456-GH', year: 2022, category: 'berline_luxe', status: 'en_service', color: 'Blanc', seats: 4, notes: 'Prestige', nextMaintenance: new Date('2026-04-15') },
-  { id: 3, brand: 'Mercedes', model: 'Vito', licensePlate: 'IJ-789-KL', year: 2023, category: 'van', status: 'disponible', color: 'Noir', seats: 7, notes: 'Groupes', nextMaintenance: new Date('2026-07-01') },
+  { id: 1, brand: 'Mercedes', model: 'Classe E', licensePlate: 'AB-123-CD', year: 2023, category: 'berline', status: 'disponible', color: 'Noir', seats: 3, notes: 'Berline business principale', nextMaintenance: new Date('2026-06-01') },
+  { id: 2, brand: 'Mercedes', model: 'Classe S', licensePlate: 'EF-456-GH', year: 2023, category: 'berline_luxe', status: 'en_service', color: 'Noir', seats: 3, notes: 'Berline prestige VIP', nextMaintenance: new Date('2026-04-15') },
+  { id: 3, brand: 'Mercedes', model: 'Classe V', licensePlate: 'IJ-789-KL', year: 2023, category: 'van', status: 'disponible', color: 'Noir', seats: 6, notes: 'Van premium groupes et familles', nextMaintenance: new Date('2026-07-01') },
+  { id: 4, brand: 'Tesla', model: 'Model Y', licensePlate: 'MN-012-OP', year: 2024, category: 'berline', status: 'disponible', color: 'Blanc', seats: 3, notes: 'Électrique premium', nextMaintenance: new Date('2026-09-01') },
 ];
 export const DEMO_DEMANDS = [
   { id: 1, clientId: 1, origin: 'Paris CDG Terminal 2', destination: 'Paris 8ème - Hôtel Plaza', date: new Date('2026-03-25T08:30:00'), passengers: 2, status: 'en_attente', serviceType: 'aeroport', notes: 'Vol AF1234', createdAt: new Date('2026-03-20'), assignedTo: null },
@@ -40,7 +41,7 @@ export const DEMO_QUOTES = [
   { id: 3, demandId: 3, number: 'DEV-2026-003', price: 132, priceHT: 120, vatRate: 10, status: 'brouillon', validUntil: new Date('2026-04-27'), notes: 'Tarif transfert aéroport', createdAt: new Date('2026-03-22') },
 ];
 export const DEMO_ALERTS = [
-  { id: 1, type: 'maintenance', title: 'Maintenance BMW Série 7', message: 'Révision prévue dans 3 semaines', priority: 'haute', status: 'active', vehicleId: 2, chauffeurId: null, createdAt: new Date('2026-03-23') },
+  { id: 1, type: 'maintenance', title: 'Maintenance Mercedes Classe S', message: 'Révision prévue dans 3 semaines', priority: 'haute', status: 'active', vehicleId: 2, chauffeurId: null, createdAt: new Date('2026-03-23') },
   { id: 2, type: 'retard', title: 'Retard mission #1', message: 'Trafic dense sur A1 - retard estimé 20 min', priority: 'urgente', status: 'active', vehicleId: null, chauffeurId: 1, createdAt: new Date('2026-03-23') },
   { id: 3, type: 'info', title: 'Nouveau client enregistré', message: 'Marc Lefebvre - Finance Corp', priority: 'normale', status: 'lue', vehicleId: null, chauffeurId: null, createdAt: new Date('2026-03-22') },
 ];
