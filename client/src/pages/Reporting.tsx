@@ -31,75 +31,49 @@ import {
 export default function Reporting() {
   const { t } = useLanguage();
   const { data: missions, isLoading } = trpc.missions.list.useQuery();
-  const { data: clients } = trpc.clients.list.useQuery();
-  const { data: reviews } = trpc.reviews.list.useQuery();
   const [dateRange, setDateRange] = useState('month');
 
-  // Calcul du CA réel depuis les missions
-  const totalRevenue = (missions ?? []).reduce((sum: number, m: any) => {
-    const price = m.price ?? m.priceHT ?? 0;
-    return sum + (typeof price === 'number' ? price : parseFloat(price) || 0);
-  }, 0);
+  // Sample data for charts
+  const monthlyData = [
+    { month: 'Jan', missions: 45, revenue: 4500 },
+    { month: 'Fév', missions: 52, revenue: 5200 },
+    { month: 'Mar', missions: 48, revenue: 4800 },
+    { month: 'Avr', missions: 61, revenue: 6100 },
+    { month: 'Mai', missions: 55, revenue: 5500 },
+    { month: 'Jun', missions: 67, revenue: 6700 },
+  ];
 
-  // Calcul de la note moyenne réelle
-  const avgRating = (reviews ?? []).length > 0
-    ? ((reviews ?? []).reduce((sum: number, r: any) => sum + (r.rating ?? 0), 0) / (reviews ?? []).length).toFixed(1)
-    : '5.0';
+  const missionTypeData = [
+    { name: t('demands.airport'), value: 35 },
+    { name: t('demands.business'), value: 25 },
+    { name: t('demands.event'), value: 20 },
+    { name: t('demands.other'), value: 20 },
+  ];
 
-  // Données mensuelles calculées depuis les missions réelles
-  const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-  const monthlyMap: Record<number, { missions: number; revenue: number }> = {};
-  (missions ?? []).forEach((m: any) => {
-    const d = new Date(m.date ?? m.startDate ?? Date.now());
-    const mo = d.getMonth();
-    if (!monthlyMap[mo]) monthlyMap[mo] = { missions: 0, revenue: 0 };
-    monthlyMap[mo].missions += 1;
-    monthlyMap[mo].revenue += m.price ?? m.priceHT ?? 0;
-  });
-  const currentMonth = new Date().getMonth();
-  const monthlyData = Array.from({ length: 6 }, (_, i) => {
-    const mo = (currentMonth - 5 + i + 12) % 12;
-    return { month: monthNames[mo], ...(monthlyMap[mo] ?? { missions: 0, revenue: 0 }) };
-  });
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
-  // Types de missions depuis les données réelles
-  const typeCount: Record<string, number> = {};
-  (missions ?? []).forEach((m: any) => {
-    const type = m.type ?? 'Autre';
-    typeCount[type] = (typeCount[type] ?? 0) + 1;
-  });
-  const missionTypeData = Object.entries(typeCount).length > 0
-    ? Object.entries(typeCount).map(([name, value]) => ({ name, value }))
-    : [
-        { name: t('demands.airport'), value: 35 },
-        { name: t('demands.business'), value: 25 },
-        { name: t('demands.event'), value: 20 },
-        { name: 'Autre', value: 20 },
-      ];
-
-  const COLORS = ['#C9A84C', '#10b981', '#3b82f6', '#ef4444'];
   const stats = [
     {
       title: t('reporting.totalMissions'),
-      value: missions?.length ?? 0,
+      value: missions?.length || 0,
       icon: Truck,
       color: 'text-blue-600',
     },
     {
       title: t('reporting.totalRevenue'),
-      value: totalRevenue > 0 ? `€${totalRevenue.toLocaleString('fr-FR')}` : '—',
+      value: '€45,200',
       icon: DollarSign,
       color: 'text-green-600',
     },
     {
       title: t('reporting.activeClients'),
-      value: clients?.length ?? 0,
+      value: 156,
       icon: Users,
       color: 'text-purple-600',
     },
     {
       title: t('reporting.avgRating'),
-      value: `${avgRating}/5`,
+      value: '4.8/5',
       icon: TrendingUp,
       color: 'text-orange-600',
     },

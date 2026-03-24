@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { generateMissionPDF, generateQuotePDF, generateInvoicePDF, generateFicheMissionPDF } from "../pdf-service";
+import { generateMissionPDF, generateQuotePDF, generateInvoicePDF } from "../pdf-service";
 import { DEMO_MISSIONS, DEMO_CLIENTS, DEMO_CHAUFFEURS, DEMO_VEHICLES, DEMO_QUOTES } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -45,6 +45,11 @@ async function startServer() {
       createContext,
     })
   );
+  // Healthcheck pour Railway
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", service: "Majestic South Chauffeurs", timestamp: new Date().toISOString() });
+  });
+
   // PDF generation routes
   app.get("/api/pdf/mission/:id", async (req, res) => {
     try {
@@ -56,30 +61,6 @@ async function startServer() {
       const buf = await generateMissionPDF({ ...m, client, chauffeur, vehicle });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="mission-${id}.pdf"`);
-      res.send(buf);
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-  });
-
-  // Fiche de mission complète (format officiel premium)
-  app.get("/api/pdf/fiche/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const m = DEMO_MISSIONS.find(x => x.id === id) || DEMO_MISSIONS[0];
-      const client = DEMO_CLIENTS.find(c => c.id === m.clientId);
-      const chauffeur = DEMO_CHAUFFEURS.find(c => c.id === m.chauffeurId);
-      const vehicle = DEMO_VEHICLES.find(v => v.id === m.vehicleId);
-      const buf = await generateFicheMissionPDF({
-        ...m,
-        client: client ? { ...client, language: 'Fran\u00e7ais' } : undefined,
-        chauffeur,
-        vehicle,
-        dossierNumber: String(m.id).padStart(5, '0'),
-        version: 1,
-        flightNumber: m.notes?.includes('Vol') ? m.notes : undefined,
-        createdAt: m.createdAt,
-      });
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="fiche-mission-${m.number || id}.pdf"`);
       res.send(buf);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
@@ -97,7 +78,7 @@ async function startServer() {
         destination: demand?.destination,
         date: demand?.date,
         passengers: demand?.passengers,
-        serviceType: demand?.serviceType,
+        serviceType: (demand as any)?.serviceType || (demand as any)?.type,
       });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="devis-${q.number}.pdf"`);
@@ -105,33 +86,28 @@ async function startServer() {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  app.get("/api/pdf/invoice/:id", async (req, res) => {
+  app.get("/api/pdf/invoice/:clientId", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      // L'ID correspond à l'ID de la mission (les factures sont générées depuis les missions)
-      const mission = DEMO_MISSIONS.find(m => m.id === id) || DEMO_MISSIONS[0];
-      const client = DEMO_CLIENTS.find(c => c.id === mission.clientId) || DEMO_CLIENTS[0];
-      const vatRate = (mission as any).vatRate || 20;
-      const priceHT = (mission as any).priceHT || (mission.price || 0) / (1 + vatRate / 100);
-      const totalHT = priceHT;
-      const totalTTC = mission.price || 0;
-      const invoiceNum = `FAC-${String(id).padStart(4, '0')}`;
-      const paymentStatus = (mission as any).paymentStatus;
-      const invoiceStatus = paymentStatus === 'paye' ? 'payee' : 'en_attente';
+      const clientId = parseInt(req.params.clientId);
+      const client = DEMO_CLIENTS.find(c => c.id === clientId) || DEMO_CLIENTS[0];
+      const missions = DEMO_MISSIONS.filter(m => m.clientId === clientId && m.status === "terminee");
+      const totalHT = missions.reduce((s, m) => s + (m.price || 0) / 1.2, 0);
+      const totalTTC = missions.reduce((s, m) => s + (m.price || 0), 0);
+      const invoiceNum = `FAC-${new Date().getFullYear()}-${String(clientId).padStart(3, "0")}`;
       const buf = await generateInvoicePDF({
-        id,
+        id: clientId,
         number: invoiceNum,
         client,
-        missions: [mission],
+        missions,
         totalHT,
-        tva: vatRate,
+        tva: 20,
         totalTTC,
-        status: invoiceStatus,
-        issueDate: mission.date ? new Date(mission.date) : new Date(),
+        status: "en_attente",
+        issueDate: new Date(),
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       });
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${invoiceNum}.pdf"`);
+      res.setHeader("Content-Disposition", `attachment; filename="facture-${invoiceNum}.pdf"`);
       res.send(buf);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });

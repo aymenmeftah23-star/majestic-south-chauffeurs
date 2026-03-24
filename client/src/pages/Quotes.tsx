@@ -25,7 +25,6 @@ export default function Quotes() {
   const statuses = [
     { value: 'brouillon', label: 'Brouillon' },
     { value: 'envoye', label: 'Envoyé' },
-    { value: 'consulte', label: 'Consulté' },
     { value: 'accepte', label: 'Accepté' },
     { value: 'refuse', label: 'Refusé' },
     { value: 'expire', label: 'Expiré' },
@@ -88,7 +87,7 @@ export default function Quotes() {
                 <label className="text-sm font-medium mb-2 block">{t('common.status')}</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Tous les statuts" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
@@ -148,7 +147,7 @@ export default function Quotes() {
                           <div>
                             <p className="text-sm text-muted-foreground">{t('quotes.price')}</p>
                             <p className="font-medium text-lg">
-                              {quote.price ? Number(quote.price).toFixed(2) : '0.00'} €
+                              {quote.price ? Number(quote.price).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'} €
                             </p>
                           </div>
                         </div>
@@ -159,7 +158,7 @@ export default function Quotes() {
                           <div>
                             <p className="text-sm text-muted-foreground">{t('quotes.priceHT')}</p>
                             <p className="font-medium">
-                              {quote.priceHT ? Number(quote.priceHT).toFixed(2) : '0.00'} €
+                              {quote.priceHT ? Number(quote.priceHT).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'} €
                             </p>
                           </div>
                         </div>

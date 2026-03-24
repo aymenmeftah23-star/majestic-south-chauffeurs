@@ -30,7 +30,6 @@ import Support from "./pages/Support";
 import PromoCodes from "./pages/PromoCodes";
 import Chat from "./pages/Chat";
 import History from "./pages/History";
-import Bonuses from "./pages/Bonuses";
 import CreateMission from "./pages/CreateMission";
 import CreateChauffeur from "./pages/CreateChauffeur";
 import CreateVehicle from "./pages/CreateVehicle";
@@ -38,11 +37,8 @@ import CreateClient from "./pages/CreateClient";
 import CreateQuote from "./pages/CreateQuote";
 import AuditTrail from "./pages/AuditTrail";
 import Webhooks from "./pages/Webhooks";
+import Bonuses from "./pages/Bonuses";
 import MissionDetail from "./pages/MissionDetail";
-import EditMission from "./pages/EditMission";
-import EditClient from "./pages/EditClient";
-import EditChauffeur from "./pages/EditChauffeur";
-import EditVehicle from "./pages/EditVehicle";
 import ChauffeurDetail from "./pages/ChauffeurDetail";
 import VehicleDetail from "./pages/VehicleDetail";
 import ClientDetail from "./pages/ClientDetail";
@@ -51,6 +47,7 @@ import LandingPage from "./pages/LandingPage";
 import BookingForm from "./pages/BookingForm";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import Members from "./pages/Members";
 
 function Router() {
   return (
@@ -73,7 +70,6 @@ function Router() {
       {/* Missions */}
       <Route path={"/missions"} component={Missions} />
       <Route path={"/missions/new"} component={CreateMission} />
-      <Route path={"/missions/:id/edit"} component={EditMission} />
       <Route path={"/missions/:id"} component={MissionDetail} />
 
       {/* Quotes */}
@@ -84,40 +80,40 @@ function Router() {
       {/* Chauffeurs */}
       <Route path={"/chauffeurs"} component={Chauffeurs} />
       <Route path={"/chauffeurs/new"} component={CreateChauffeur} />
-      <Route path={"/chauffeurs/:id/edit"} component={EditChauffeur} />
       <Route path={"/chauffeurs/:id"} component={ChauffeurDetail} />
 
       {/* Vehicles */}
       <Route path={"/vehicles"} component={Vehicles} />
       <Route path={"/vehicles/new"} component={CreateVehicle} />
-      <Route path={"/vehicles/:id/edit"} component={EditVehicle} />
       <Route path={"/vehicles/:id"} component={VehicleDetail} />
 
       {/* Clients */}
       <Route path={"/clients"} component={Clients} />
       <Route path={"/clients/new"} component={CreateClient} />
-      <Route path={"/clients/:id/edit"} component={EditClient} />
       <Route path={"/clients/:id"} component={ClientDetail} />
 
       {/* Other modules */}
       <Route path={"/planning"} component={Planning} />
       <Route path={"/alerts"} component={Alerts} />
       <Route path={"/reporting"} component={Reporting} />
+      <Route path={"/stats"} component={Reporting} />
       <Route path={"/client-portal"} component={ClientPortal} />
       <Route path={"/settings"} component={Settings} />
       <Route path={"/search"} component={Search} />
       <Route path={"/payments"} component={Payments} />
       <Route path={"/reviews"} component={Reviews} />
       <Route path={"/invoices"} component={Invoices} />
+      <Route path={"/invoices/:id"} component={Invoices} />
       <Route path={"/gps-tracking"} component={GPSTracking} />
       <Route path={"/api-documentation"} component={APIDocumentation} />
       <Route path={"/support"} component={Support} />
       <Route path={"/promo-codes"} component={PromoCodes} />
       <Route path={"/chat"} component={Chat} />
       <Route path={"/history"} component={History} />
-      <Route path={"/bonuses"} component={Bonuses} />
       <Route path={"/audit-trail"} component={AuditTrail} />
       <Route path={"/webhooks"} component={Webhooks} />
+      <Route path={"/bonuses"} component={Bonuses} />
+      <Route path={"/members"} component={Members} />
 
       {/* Legacy routes (backward compat) */}
       <Route path={"/create-mission"} component={CreateMission} />

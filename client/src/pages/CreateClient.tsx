@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,7 +21,7 @@ export default function CreateClient() {
 
   const createMutation = trpc.clients.create.useMutation({
     onSuccess: () => navigate('/clients'),
-    onError: (err) => toast.error('Erreur : ' + err.message),
+    onError: (err) => alert('Erreur : ' + err.message),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -80,19 +79,21 @@ export default function CreateClient() {
                   <Select value={formData.type} onValueChange={(v) => setFormData(p => ({ ...p, type: v as any }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="particulier">{t('clients.individual')}</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                      <SelectItem value="hotel">{t('clients.hotel')}</SelectItem>
-                      <SelectItem value="agence">{t('clients.agency')}</SelectItem>
-                      <SelectItem value="partenaire">Partenaire</SelectItem>
-                      <SelectItem value="vip">VIP</SelectItem>
+                      <SelectItem value="particulier">{t('clients.particulier')}</SelectItem>
+                      <SelectItem value="vip">⭐ VIP</SelectItem>
+                      <SelectItem value="business">{t('clients.business')}</SelectItem>
+                      <SelectItem value="hotel">🏨 Hôtel / Resort</SelectItem>
+                      <SelectItem value="agence">💼 Agence de voyage</SelectItem>
+                      <SelectItem value="partenaire">🤝 Partenaire</SelectItem>
+                      <SelectItem value="corporate">🏢 Corporate / Grand compte</SelectItem>
+                      <SelectItem value="croisiere">🚢 Croisière / Yacht</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('clients.address')}</label>
-                <Input name="address" value={formData.address} onChange={handleChange} placeholder="123 rue de la Paix, Paris" />
+                <Input name="address" value={formData.address} onChange={handleChange} placeholder="123 avenue du Prado, Marseille" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('clients.preferences')}</label>

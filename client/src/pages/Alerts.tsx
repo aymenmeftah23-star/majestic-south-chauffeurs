@@ -194,7 +194,7 @@ export default function Alerts() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updateMutation.mutate({ id: alert.id, status: 'acknowledged' })}
+                              onClick={() => updateMutation.mutate({ id: alert.id, status: 'lue' })}
                               disabled={updateMutation.isPending}
                             >
                               {t('alerts.acknowledge')}
@@ -202,7 +202,7 @@ export default function Alerts() {
                           )}
                           <Button
                             size="sm"
-                            onClick={() => updateMutation.mutate({ id: alert.id, status: 'resolved' })}
+                            onClick={() => updateMutation.mutate({ id: alert.id, status: 'resolue' })}
                             disabled={updateMutation.isPending}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-1" />

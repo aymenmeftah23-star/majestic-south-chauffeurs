@@ -7,17 +7,15 @@ import { Car, Plus, Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Downlo
 const GOLD = "#C9A84C";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  disponible:   { label: "Disponible",   color: "text-green-600 dark:text-green-400",  dot: "bg-green-500" },
-  en_service:   { label: "En service",   color: "text-blue-600 dark:text-blue-400",    dot: "bg-blue-500" },
-  maintenance:  { label: "Maintenance",  color: "text-orange-600 dark:text-orange-400",dot: "bg-orange-500" },
-  indisponible: { label: "Indisponible", color: "text-red-600 dark:text-red-400",      dot: "bg-red-500" },
-  // Aliases anglais pour compatibilité
   available:    { label: "Disponible",   color: "text-green-600 dark:text-green-400",  dot: "bg-green-500" },
   in_use:       { label: "En service",   color: "text-blue-600 dark:text-blue-400",    dot: "bg-blue-500" },
+  maintenance:  { label: "Maintenance",  color: "text-orange-600 dark:text-orange-400",dot: "bg-orange-500" },
   unavailable:  { label: "Indisponible", color: "text-red-600 dark:text-red-400",      dot: "bg-red-500" },
 };
 
-
+const TYPE_ICONS: Record<string, string> = {
+  berline: "🚗", van: "🚐", suv: "🚙", minibus: "🚌", limousine: "🏎️", autre: "🚘",
+};
 
 export default function Vehicles() {
   const [search, setSearch] = useState("");
@@ -29,12 +27,26 @@ export default function Vehicles() {
   const deleteMutation = trpc.vehicles.delete.useMutation({ onSuccess: () => refetch() });
 
   const vehicles: any[] = data ?? [];
+
+  // Normalisation des statuts (la BDD utilise 'disponible', 'en_service', 'entretien')
+  const normalizeStatus = (s: string) => {
+    if (!s) return 'available';
+    const map: Record<string, string> = {
+      disponible: 'available', available: 'available',
+      en_service: 'in_use', in_use: 'in_use', en_mission: 'in_use',
+      entretien: 'maintenance', maintenance: 'maintenance',
+      hors_service: 'unavailable', unavailable: 'unavailable',
+      reserve: 'in_use',
+    };
+    return map[s] ?? 'available';
+  };
+
   const filtered = vehicles.filter((v: any) => {
     const matchSearch = !search ||
       (v.brand ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (v.model ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (v.licensePlate ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || v.status === statusFilter;
+    const matchStatus = statusFilter === "all" || normalizeStatus(v.status) === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -43,9 +55,9 @@ export default function Vehicles() {
 
   const counts: Record<string, number> = {
     all: vehicles.length,
-    disponible: vehicles.filter((v: any) => v.status === "disponible" || v.status === "available").length,
-    en_service: vehicles.filter((v: any) => v.status === "en_service" || v.status === "in_use").length,
-    maintenance: vehicles.filter((v: any) => v.status === "maintenance").length,
+    available: vehicles.filter((v: any) => normalizeStatus(v.status) === "available").length,
+    in_use: vehicles.filter((v: any) => normalizeStatus(v.status) === "in_use").length,
+    maintenance: vehicles.filter((v: any) => normalizeStatus(v.status) === "maintenance").length,
   };
 
   return (
@@ -66,7 +78,7 @@ export default function Vehicles() {
         </div>
 
         <div className="flex gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl overflow-x-auto">
-          {[{ key: "all", label: "Tous" }, { key: "disponible", label: "Disponibles" }, { key: "en_service", label: "En service" }, { key: "maintenance", label: "Maintenance" }].map((tab) => (
+          {[{ key: "all", label: "Tous" }, { key: "available", label: "Disponibles" }, { key: "in_use", label: "En service" }, { key: "maintenance", label: "Maintenance" }].map((tab) => (
             <button key={tab.key} onClick={() => { setStatusFilter(tab.key); setPage(1); }}
               className={"flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all " + (statusFilter === tab.key ? "bg-white dark:bg-white/15 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300")}>
               {tab.label}
@@ -89,12 +101,13 @@ export default function Vehicles() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginated.map((v: any) => {
-              const sc = STATUS_CONFIG[v.status] ?? STATUS_CONFIG.disponible;
+              const sc = STATUS_CONFIG[normalizeStatus(v.status)] ?? STATUS_CONFIG.available;
+              const typeIcon = TYPE_ICONS[v.type?.toLowerCase()] ?? "🚗";
               return (
                 <div key={v.id} className="bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-5 hover:shadow-lg dark:hover:shadow-black/20 hover:border-[#C9A84C]/30 transition-all group">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/10 flex-shrink-0"><Car className="h-6 w-6" style={{ color: GOLD }} /></div>
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-gray-100 dark:bg-white/10 flex-shrink-0">{typeIcon}</div>
                       <div>
                         <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{v.brand} {v.model}</h3>
                         <div className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5 bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded inline-block">{v.licensePlate ?? "—"}</div>
@@ -109,7 +122,7 @@ export default function Vehicles() {
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     <div className="text-center p-2 bg-gray-50 dark:bg-white/5 rounded-lg">
                       <Users className="h-3.5 w-3.5 mx-auto mb-1 text-gray-400" />
-                      <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">{v.capacity ?? "—"}</div>
+                      <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">{v.seats ?? v.capacity ?? "—"}</div>
                       <div className="text-xs text-gray-400">places</div>
                     </div>
                     <div className="text-center p-2 bg-gray-50 dark:bg-white/5 rounded-lg">

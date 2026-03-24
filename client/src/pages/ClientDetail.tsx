@@ -3,17 +3,22 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, Phone, Mail, Building, MapPin, Loader2, Trash2, Star, Pencil } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Building, MapPin, Loader2, Trash2, Star } from 'lucide-react';
 import { useLocation, useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
-const TYPE_COLORS: Record<string, string> = {
-  particulier: 'bg-gray-100 text-gray-800',
-  business: 'bg-blue-100 text-blue-800',
-  hotel: 'bg-purple-100 text-purple-800',
-  agence: 'bg-indigo-100 text-indigo-800',
-  partenaire: 'bg-green-100 text-green-800',
-  vip: 'bg-yellow-100 text-yellow-800',
+const STATUS_LABELS: Record<string, string> = {
+  a_confirmer: 'À confirmer',
+  confirmee: 'Confirmée',
+  en_preparation: 'En préparation',
+  chauffeur_assigne: 'Chauffeur assigné',
+  vehicule_assigne: 'Véhicule assigné',
+  prete: 'Prête',
+  en_cours: 'En cours',
+  client_pris_en_charge: 'Client pris en charge',
+  terminee: 'Terminée',
+  annulee: 'Annulée',
+  litige: 'Litige',
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -25,20 +30,13 @@ const TYPE_LABELS: Record<string, string> = {
   vip: 'VIP',
 };
 
-const MISSION_STATUS_LABELS: Record<string, string> = {
-  a_confirmer: 'À confirmer',
-  planifiee: 'Planifiée',
-  en_cours: 'En cours',
-  terminee: 'Terminée',
-  annulee: 'Annulée',
-};
-
-const MISSION_STATUS_COLORS: Record<string, string> = {
-  a_confirmer: 'bg-yellow-100 text-yellow-800',
-  planifiee: 'bg-blue-100 text-blue-800',
-  en_cours: 'bg-indigo-100 text-indigo-800',
-  terminee: 'bg-green-100 text-green-800',
-  annulee: 'bg-red-100 text-red-800',
+const TYPE_COLORS: Record<string, string> = {
+  particulier: 'bg-gray-100 text-gray-800',
+  business: 'bg-blue-100 text-blue-800',
+  hotel: 'bg-purple-100 text-purple-800',
+  agence: 'bg-indigo-100 text-indigo-800',
+  partenaire: 'bg-green-100 text-green-800',
+  vip: 'bg-yellow-100 text-yellow-800',
 };
 
 export default function ClientDetail() {
@@ -70,11 +68,8 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={TYPE_COLORS[client.type || 'particulier']}>{TYPE_LABELS[client.type || 'particulier'] || client.type}</Badge>
+            <Badge className={TYPE_COLORS[client.type || 'particulier']}>{TYPE_LABELS[client.type || 'particulier'] ?? client.type}</Badge>
             <Button size="sm" onClick={() => navigate('/missions/new')}>+ {t('missions.create')}</Button>
-            <Button variant="outline" size="sm" onClick={() => navigate(`/clients/${id}/edit`)}>
-              <Pencil className="h-4 w-4 mr-1" /> Modifier
-            </Button>
             <Button variant="destructive" size="sm" onClick={() => confirm('Supprimer ?') && deleteMutation.mutate({ id })} disabled={deleteMutation.isPending}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -136,7 +131,7 @@ export default function ClientDetail() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm">{new Date(m.date).toLocaleDateString('fr-FR')}</p>
-                      <Badge className={`text-xs ${MISSION_STATUS_COLORS[m.status] || 'bg-gray-100 text-gray-800'}`}>{MISSION_STATUS_LABELS[m.status] || m.status}</Badge>
+                      <Badge variant="outline" className="text-xs">{STATUS_LABELS[m.status || ''] ?? m.status}</Badge>
                     </div>
                   </div>
                 ))}

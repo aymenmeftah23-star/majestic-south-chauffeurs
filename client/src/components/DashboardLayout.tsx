@@ -1,22 +1,16 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { trpc } from "@/lib/trpc";
 import {
-  LayoutDashboard, MapPin, FileText, Users, Car, Truck,
+  LayoutDashboard, MapPin, FileText, Users, Car,
   Bell, BarChart3, Settings, Search, ChevronDown, LogOut,
   Menu, X, Sun, Moon, Globe, Crown, Briefcase, Calendar,
-  UserCheck, CreditCard, History, Shield, Wrench, MessageSquare,
-  Star, Tag, Gift, Webhook, Code, ClipboardList
+  UserCheck, CreditCard, History, Shield, MessageSquare,
+  Star, Tag, Gift, Webhook, Code, ClipboardList, UserCog
 } from "lucide-react";
 
 const GOLD = "#C9A84C";
-
-const DEMO_USER = {
-  name: "Aymen MEFTAH",
-  email: "contact@mschauffeur.fr",
-  role: "Président",
-  avatar: null,
-};
 
 const navGroups = [
   {
@@ -27,18 +21,18 @@ const navGroups = [
     ]
   },
   {
-    label: "Operations",
+    label: "Opérations",
     items: [
       { path: "/missions", label: "Missions", icon: MapPin },
       { path: "/demands", label: "Demandes", icon: ClipboardList },
-      { path: "/quotes", label: "Dossiers / Devis", icon: Briefcase },
+      { path: "/quotes", label: "Devis", icon: Briefcase },
     ]
   },
   {
     label: "Ressources",
     items: [
       { path: "/chauffeurs", label: "Chauffeurs", icon: UserCheck },
-      { path: "/vehicles", label: "Vehicules", icon: Car },
+      { path: "/vehicles", label: "Véhicules", icon: Car },
       { path: "/clients", label: "Clients", icon: Users },
     ]
   },
@@ -51,40 +45,32 @@ const navGroups = [
     ]
   },
   {
-    label: "Suivi & Communication",
-    items: [
-      { path: "/gps-tracking", label: "GPS Tracking", icon: MapPin },
-      { path: "/chat", label: "Messagerie", icon: MessageSquare },
-      { path: "/reviews", label: "Avis Clients", icon: Star },
-    ]
-  },
-  {
-    label: "Fidélisation",
-    items: [
-      { path: "/bonuses", label: "Primes Chauffeurs", icon: Gift },
-      { path: "/promo-codes", label: "Codes Promo", icon: Tag },
-      { path: "/client-portal", label: "Espace Client", icon: Users },
-    ]
-  },
-  {
-    label: "Systeme",
+    label: "Système",
     items: [
       { path: "/alerts", label: "Alertes", icon: Bell },
+      { path: "/members", label: "Membres", icon: UserCog },
       { path: "/history", label: "Historique", icon: History },
-      { path: "/audit-trail", label: "Journal d'audit", icon: Shield },
-      { path: "/support", label: "Support", icon: Wrench },
-      { path: "/settings", label: "Parametres", icon: Settings },
+      { path: "/settings", label: "Paramètres", icon: Settings },
     ]
   }
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { language, setLanguage } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Récupérer l'utilisateur connecté
+  const { data: currentUser } = trpc.auth.me.useQuery();
+
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => {
+      window.location.href = "/login";
+    },
+  });
 
   const isDark = document.documentElement.classList.contains("dark");
 
@@ -94,6 +80,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const isActive = (path: string) => location === path || (path !== "/dashboard" && location.startsWith(path));
+
+  const displayName = currentUser?.name || "Utilisateur";
+  const displayEmail = currentUser?.email || "";
+  const displayRole = currentUser?.role === "admin" ? "Administrateur"
+    : currentUser?.role === "gestionnaire" ? "Gestionnaire"
+    : currentUser?.role === "chauffeur" ? "Chauffeur"
+    : currentUser?.role === "client" ? "Client"
+    : "Utilisateur";
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-[#0f0f1a] overflow-hidden">
@@ -152,17 +146,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
-        {/* User */}
+        {/* User en bas de sidebar */}
         <div className="border-t border-white/10 p-3 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#1a1a2e]" style={{background: "linear-gradient(135deg, #C9A84C, #a07830)"}}>
-              {DEMO_USER.name.charAt(0)}
+              {displayName.charAt(0).toUpperCase()}
             </div>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-white truncate">{DEMO_USER.name}</div>
-                <div className="text-xs text-gray-500 truncate">{DEMO_USER.role}</div>
+                <div className="text-xs font-semibold text-white truncate">{displayName}</div>
+                <div className="text-xs text-gray-500 truncate">{displayRole}</div>
               </div>
+            )}
+            {sidebarOpen && (
+              <button
+                onClick={() => logoutMutation.mutate()}
+                title="Déconnexion"
+                className="text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             )}
           </div>
         </div>
@@ -224,28 +227,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="flex items-center gap-2 pl-2 pr-3 py-1.5 bg-gray-100 dark:bg-white/10 rounded-lg hover:bg-gray-200 dark:hover:bg-white/15 transition-all"
               >
                 <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-[#1a1a2e]" style={{background: "linear-gradient(135deg, #C9A84C, #a07830)"}}>
-                  {DEMO_USER.name.charAt(0)}
+                  {displayName.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">{DEMO_USER.name}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">{displayName}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
               </button>
               {userMenuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-white/10">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{DEMO_USER.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{DEMO_USER.email}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{displayName}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{displayEmail}</p>
+                    <p className="text-xs text-amber-600 font-medium mt-0.5">{displayRole}</p>
                   </div>
                   <div className="py-1">
+                    <Link href="/members">
+                      <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 cursor-pointer transition-all" onClick={() => setUserMenuOpen(false)}>
+                        <UserCog className="h-4 w-4" />
+                        Gestion des membres
+                      </div>
+                    </Link>
                     <Link href="/settings">
                       <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 cursor-pointer transition-all" onClick={() => setUserMenuOpen(false)}>
                         <Settings className="h-4 w-4" />
-                        Parametres
+                        Paramètres
                       </div>
                     </Link>
-                    <div className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition-all">
+                    <div className="border-t border-gray-100 dark:border-white/10 my-1" />
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        logoutMutation.mutate();
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition-all"
+                    >
                       <LogOut className="h-4 w-4" />
-                      Deconnexion
-                    </div>
+                      Déconnexion
+                    </button>
                   </div>
                 </div>
               )}

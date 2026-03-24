@@ -1,180 +1,265 @@
-import { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Send, Circle } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { Send, Search, Phone, Video, MoreVertical } from 'lucide-react';
+import { useState } from 'react';
 
-const STATUS_COLORS: Record<string, string> = {
-  disponible: 'text-green-500',
-  en_mission: 'text-blue-500',
-  indisponible: 'text-red-500',
-};
+interface Message {
+  id: number;
+  sender: string;
+  senderType: 'client' | 'chauffeur' | 'admin';
+  content: string;
+  timestamp: string;
+  read: boolean;
+}
+
+interface Conversation {
+  id: number;
+  participantName: string;
+  participantType: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  avatar?: string;
+  online: boolean;
+}
 
 export default function Chat() {
-  const { data: conversations = [], isLoading } = trpc.chat.list.useQuery();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [message, setMessage] = useState('');
-  const [localMessages, setLocalMessages] = useState<any[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
+  const [selectedConversation, setSelectedConversation] = useState<number>(1);
+  const [messageText, setMessageText] = useState('');
 
-  const { data: serverMessages = [] } = trpc.chat.messages.useQuery(
-    { chauffeurId: selectedId! },
-    { enabled: selectedId !== null }
-  );
-  const sendMutation = trpc.chat.send.useMutation({
-    onSuccess: (newMsg) => {
-      setLocalMessages(prev => [...prev, newMsg]);
+  // Mock conversations
+  const conversations: Conversation[] = [
+    {
+      id: 1,
+      participantName: 'Jean Dupont',
+      participantType: 'Chauffeur',
+      lastMessage: 'Je suis arrivé à destination',
+      lastMessageTime: '14:35',
+      unreadCount: 0,
+      online: true,
     },
-  });
+    {
+      id: 2,
+      participantName: 'Marie Martin',
+      participantType: 'Client',
+      lastMessage: 'Merci pour le service!',
+      lastMessageTime: '13:20',
+      unreadCount: 2,
+      online: false,
+    },
+    {
+      id: 3,
+      participantName: 'Pierre Durand',
+      participantType: 'Chauffeur',
+      lastMessage: 'Quelle est mon prochaine mission?',
+      lastMessageTime: '12:15',
+      unreadCount: 1,
+      online: true,
+    },
+  ];
 
-  useEffect(() => {
-    if (serverMessages.length > 0) {
-      setLocalMessages(serverMessages as any[]);
+  // Mock messages for selected conversation
+  const messages: Message[] = [
+    {
+      id: 1,
+      sender: 'Jean Dupont',
+      senderType: 'chauffeur',
+      content: 'Bonjour, je suis en route pour vous chercher',
+      timestamp: '14:20',
+      read: true,
+    },
+    {
+      id: 2,
+      sender: 'Vous',
+      senderType: 'client',
+      content: 'Merci! À quelle heure arrivez-vous?',
+      timestamp: '14:22',
+      read: true,
+    },
+    {
+      id: 3,
+      sender: 'Jean Dupont',
+      senderType: 'chauffeur',
+      content: 'J\'arrive dans 5 minutes',
+      timestamp: '14:30',
+      read: true,
+    },
+    {
+      id: 4,
+      sender: 'Jean Dupont',
+      senderType: 'chauffeur',
+      content: 'Je suis arrivé à destination',
+      timestamp: '14:35',
+      read: true,
+    },
+  ];
+
+  const currentConversation = conversations.find((c) => c.id === selectedConversation);
+
+  const handleSendMessage = () => {
+    if (messageText.trim()) {
+      console.log('Sending message:', messageText);
+      setMessageText('');
     }
-  }, [serverMessages]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [localMessages]);
-
-  const selectedConv = (conversations as any[]).find((c: any) => c.id === selectedId);
-
-  const handleSend = () => {
-    if (!message.trim() || selectedId === null) return;
-    sendMutation.mutate({ chauffeurId: selectedId, text: message.trim() });
-    setMessage('');
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const formatTime = (date: any) => {
-    return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <MessageSquare className="h-6 w-6" />
-            Chat interne
-          </h1>
-          <p className="text-muted-foreground mt-1">Communication avec les chauffeurs</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('chat.title')}</h1>
+          <p className="text-muted-foreground mt-2">{t('chat.description')}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-220px)] min-h-[500px]">
-          {/* Liste des conversations */}
-          <Card className="md:col-span-1 overflow-hidden flex flex-col">
-            <CardHeader className="pb-3 shrink-0">
-              <CardTitle className="text-sm">Chauffeurs ({(conversations as any[]).length})</CardTitle>
+        {/* Chat Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[600px]">
+          {/* Conversations List */}
+          <Card className="lg:col-span-1 flex flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">{t('chat.conversations')}</CardTitle>
             </CardHeader>
-            <CardContent className="p-0 flex-1 overflow-y-auto">
-              {isLoading && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-                </div>
-              )}
-              {(conversations as any[]).map((conv: any) => (
+            <CardContent className="flex-1 flex flex-col gap-3 overflow-y-auto">
+              <div className="mb-3">
+                <Input
+                  placeholder={t('common.search')}
+                  className="h-9"
+                />
+              </div>
+
+              {conversations.map((conversation) => (
                 <button
-                  key={conv.id}
-                  onClick={() => { setSelectedId(conv.id); setLocalMessages([]); }}
-                  className={`w-full text-left px-4 py-3 border-b hover:bg-accent/50 transition-colors ${selectedId === conv.id ? 'bg-accent' : ''}`}
+                  key={conversation.id}
+                  onClick={() => setSelectedConversation(conversation.id)}
+                  className={`p-3 rounded-lg border-2 transition-all text-left ${
+                    selectedConversation === conversation.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="relative shrink-0">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-bold text-primary">
-                          {(conv.chauffeurName || 'C').charAt(0).toUpperCase()}
-                        </span>
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full" />
+                        {conversation.online && (
+                          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border border-white" />
+                        )}
                       </div>
-                      {conv.unread > 0 && (
-                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
-                          {conv.unread}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm truncate">{conv.chauffeurName}</span>
-                        <Circle className={`h-2 w-2 fill-current shrink-0 ${STATUS_COLORS[conv.status] || 'text-gray-400'}`} />
+                      <div>
+                        <p className="font-semibold text-sm">{conversation.participantName}</p>
+                        <p className="text-xs text-muted-foreground">{conversation.participantType}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.lastMessage}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{formatTime(conv.lastMessageAt)}</p>
                     </div>
+                    {conversation.unreadCount > 0 && (
+                      <Badge variant="default" className="text-xs">
+                        {conversation.unreadCount}
+                      </Badge>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {conversation.lastMessage}
+                  </p>
                 </button>
               ))}
             </CardContent>
           </Card>
 
-          {/* Zone de messages */}
-          <Card className="md:col-span-2 overflow-hidden flex flex-col">
-            {!selectedId ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground font-medium">Selectionnez un chauffeur</p>
-                <p className="text-sm text-muted-foreground mt-1">pour commencer la conversation</p>
-              </div>
-            ) : (
+          {/* Chat Area */}
+          <Card className="lg:col-span-2 flex flex-col">
+            {currentConversation ? (
               <>
-                <CardHeader className="pb-3 shrink-0 border-b">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary">
-                        {(selectedConv?.chauffeurName || 'C').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">{selectedConv?.chauffeurName}</CardTitle>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Circle className={`h-2 w-2 fill-current ${STATUS_COLORS[selectedConv?.status] || 'text-gray-400'}`} />
-                        <span className="text-xs text-muted-foreground capitalize">{selectedConv?.status?.replace('_', ' ')}</span>
+                {/* Chat Header */}
+                <CardHeader className="border-b pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full" />
+                        {currentConversation.online && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border border-white" />
+                        )}
                       </div>
+                      <div>
+                        <p className="font-semibold">{currentConversation.participantName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {currentConversation.online ? t('chat.online') : t('chat.offline')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="icon" variant="ghost">
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost">
+                        <Video className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
 
-                <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {localMessages.map((msg: any) => (
-                    <div key={msg.id} className={`flex ${msg.from === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                        msg.from === 'admin'
-                          ? 'bg-primary text-primary-foreground rounded-br-sm'
-                          : 'bg-muted rounded-bl-sm'
-                      }`}>
-                        <p className="text-sm leading-relaxed">{msg.text}</p>
-                        <p className={`text-xs mt-1 ${msg.from === 'admin' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                          {formatTime(msg.time)}
+                {/* Messages */}
+                <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        message.senderType === 'client' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      <div
+                        className={`max-w-xs px-4 py-2 rounded-lg ${
+                          message.senderType === 'client'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-200 text-gray-900'
+                        }`}
+                      >
+                        <p className="text-sm">{message.content}</p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            message.senderType === 'client'
+                              ? 'text-blue-100'
+                              : 'text-gray-600'
+                          }`}
+                        >
+                          {message.timestamp}
                         </p>
                       </div>
                     </div>
                   ))}
-                  <div ref={messagesEndRef} />
                 </CardContent>
 
-                <div className="p-4 border-t shrink-0">
+                {/* Message Input */}
+                <div className="border-t p-4">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Ecrire un message..."
-                      value={message}
-                      onChange={e => setMessage(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      className="flex-1"
+                      placeholder={t('chat.messagePlaceholder')}
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleSendMessage();
+                      }}
                     />
-                    <Button onClick={handleSend} disabled={!message.trim() || sendMutation.isPending} size="icon">
+                    <Button
+                      size="icon"
+                      onClick={handleSendMessage}
+                      disabled={!messageText.trim()}
+                    >
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </>
+            ) : (
+              <CardContent className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">{t('chat.selectConversation')}</p>
+              </CardContent>
             )}
           </Card>
         </div>

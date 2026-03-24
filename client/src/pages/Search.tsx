@@ -9,6 +9,16 @@ import { Search as SearchIcon, MapPin, Users, Car, ClipboardList, FileText } fro
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
+const statusLabels: Record<string, string> = {
+  confirmed: 'Confirmée', in_progress: 'En cours', completed: 'Terminée',
+  cancelled: 'Annulée', pending: 'En attente',
+  planifiee: 'Planifiée', en_cours: 'En cours', terminee: 'Terminée',
+  annulee: 'Annulée', en_attente: 'En attente', confirmee: 'Confirmée',
+  sent: 'Envoyé', accepted: 'Accepté', rejected: 'Refusé',
+  actif: 'Actif', disponible: 'Disponible', indisponible: 'Indisponible',
+  particulier: 'Particulier', business: 'Business', hotel: 'Hôtel', vip: 'VIP',
+};
+
 export default function Search() {
   const { t } = useLanguage();
   const [, navigate] = useLocation();
@@ -101,7 +111,7 @@ export default function Search() {
                           {new Date(m.date).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
-                      <Badge variant="outline">{m.status}</Badge>
+                      <Badge variant="outline">{statusLabels[m.status] ?? m.status}</Badge>
                     </div>
                   ))}
                 </CardContent>
@@ -127,7 +137,7 @@ export default function Search() {
                         <p className="font-medium">{c.name}</p>
                         <p className="text-sm text-muted-foreground">{c.email} {c.company ? `· ${c.company}` : ''}</p>
                       </div>
-                      <Badge variant="outline">{c.type || 'client'}</Badge>
+                      <Badge variant="outline">{statusLabels[c.type] ?? c.type ?? 'Client'}</Badge>
                     </div>
                   ))}
                 </CardContent>
@@ -153,7 +163,7 @@ export default function Search() {
                         <p className="font-medium">{c.name}</p>
                         <p className="text-sm text-muted-foreground">{c.email}</p>
                       </div>
-                      <Badge variant="outline">{c.status || 'actif'}</Badge>
+                      <Badge variant="outline">{statusLabels[c.status] ?? c.status ?? 'Actif'}</Badge>
                     </div>
                   ))}
                 </CardContent>
@@ -181,7 +191,7 @@ export default function Search() {
                           {new Date(d.date).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
-                      <Badge variant="outline">{d.status}</Badge>
+                      <Badge variant="outline">{statusLabels[d.status] ?? d.status}</Badge>
                     </div>
                   ))}
                 </CardContent>
@@ -209,7 +219,7 @@ export default function Search() {
                           {q.totalTtc ? `${q.totalTtc}€ TTC` : '-'}
                         </p>
                       </div>
-                      <Badge variant="outline">{q.status}</Badge>
+                      <Badge variant="outline">{statusLabels[q.status] ?? q.status}</Badge>
                     </div>
                   ))}
                 </CardContent>

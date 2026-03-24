@@ -32,22 +32,39 @@ const vehicleTypes = [
 ];
 
 const statusColors: Record<string, string> = {
-  a_confirmer: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  confirmed: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  in_progress: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  pending: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  // French statuses
   planifiee: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  confirmee: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   en_cours: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
   terminee: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   annulee: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  en_attente: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  en_attente: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  confirmee: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
 };
 
 const statusLabels: Record<string, string> = {
-  a_confirmer: "À confirmer",
+  confirmed: "Confirmée",
+  in_progress: "En cours",
+  completed: "Terminée",
+  cancelled: "Annulée",
+  pending: "En attente",
+  // French statuses
   planifiee: "Planifiée",
+  a_confirmer: "À confirmer",
   confirmee: "Confirmée",
+  en_preparation: "En préparation",
+  chauffeur_assigne: "Chauffeur assigné",
+  vehicule_assigne: "Véhicule assigné",
+  prete: "Prête",
   en_cours: "En cours",
+  client_pris_en_charge: "Client pris en charge",
   terminee: "Terminée",
   annulee: "Annulée",
+  litige: "Litige",
   en_attente: "En attente",
 };
 
@@ -81,7 +98,7 @@ export default function Dashboard() {
       color: "from-blue-500 to-blue-600",
       bg: "bg-blue-50 dark:bg-blue-900/20",
       text: "text-blue-600 dark:text-blue-400",
-      sub: `${stats?.monthMissions ?? missions.length} ce mois`,
+      sub: `${missions.length} ce mois`,
       trend: "+12%", up: true, href: "/missions",
     },
     {
@@ -101,7 +118,7 @@ export default function Dashboard() {
       color: "from-green-500 to-green-600",
       bg: "bg-green-50 dark:bg-green-900/20",
       text: "text-green-600 dark:text-green-400",
-      sub: `${stats?.totalChauffeurs ?? 3} au total`,
+      sub: `${stats?.availableChauffeurs ?? 3} au total`,
       trend: "Operationnel", up: true, href: "/chauffeurs",
     },
     {
@@ -127,7 +144,7 @@ export default function Dashboard() {
     },
     {
       title: "Clients actifs",
-      value: stats?.totalClients ?? 8,
+      value: 8,
       icon: Users,
       color: "from-purple-500 to-purple-600",
       bg: "bg-purple-50 dark:bg-purple-900/20",
@@ -277,7 +294,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-3 mt-0.5">
                         <span className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {(m.date || m.startDate) ? new Date(m.date ?? m.startDate).toLocaleDateString("fr-FR") : "N/A"}
+                          {m.date ? new Date(m.date).toLocaleDateString("fr-FR") : m.startDate ? new Date(m.startDate).toLocaleDateString("fr-FR") : "N/A"}
                         </span>
                       </div>
                     </div>

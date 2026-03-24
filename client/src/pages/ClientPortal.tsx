@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from 'sonner';
 import { useLocation } from "wouter";
 import {
   Crown, Car, FileText, ClipboardList, User, LogOut,
@@ -63,9 +62,9 @@ export default function ClientPortal() {
     notes: "",
   });
 
-  const { data: missions } = trpc.missions.list.useQuery({});
-  const { data: quotes } = trpc.quotes.list.useQuery({});
-  const { data: demands } = trpc.demands.list.useQuery({});
+  const { data: missions } = trpc.missions.list.useQuery(undefined as any);
+  const { data: quotes } = trpc.quotes.list.useQuery(undefined as any);
+  const { data: demands } = trpc.demands.list.useQuery(undefined as any);
 
   const missionsList = (missions as any)?.items || [];
   const quotesList = (quotes as any)?.items || [];
@@ -370,7 +369,7 @@ export default function ClientPortal() {
                   </div>
                 </div>
                 <div className="flex gap-3 mt-4">
-                  <button onClick={() => { toast.success("Demande envoyée ! Nous vous contacterons rapidement."); setShowNewDemand(false); }} className="px-6 py-2.5 rounded-xl text-sm font-medium text-black" style={{background: 'linear-gradient(135deg, #d4af37, #b8960c)'}}>
+                  <button onClick={() => { alert("Demande envoyée ! Nous vous contacterons rapidement."); setShowNewDemand(false); }} className="px-6 py-2.5 rounded-xl text-sm font-medium text-black" style={{background: 'linear-gradient(135deg, #d4af37, #b8960c)'}}>
                     Envoyer la demande
                   </button>
                   <button onClick={() => setShowNewDemand(false)} className="px-6 py-2.5 rounded-xl text-sm font-medium border border-amber-900/30 text-gray-400 hover:text-white">

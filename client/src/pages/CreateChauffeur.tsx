@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +22,7 @@ export default function CreateChauffeur() {
 
   const createMutation = trpc.chauffeurs.create.useMutation({
     onSuccess: () => navigate('/chauffeurs'),
-    onError: (err) => toast.error('Erreur : ' + err.message),
+    onError: (err) => alert('Erreur : ' + err.message),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -96,7 +95,7 @@ export default function CreateChauffeur() {
               <div className="space-y-3">
                 <label className="text-sm font-medium">{t('chauffeurs.languages')}</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {['Français', 'Anglais', 'Espagnol', 'Allemand', 'Arabe', 'Mandarin'].map(lang => (
+                  {['Français', 'Anglais', 'Espagnol', 'Allemand', 'Arabe', 'Mandarin', 'Italien', 'Russe', 'Portugais', 'Japonais'].map(lang => (
                     <div key={lang} className="flex items-center gap-2">
                       <Checkbox checked={formData.languages.includes(lang)} onCheckedChange={() => handleCheckbox('languages', lang)} />
                       <label className="text-sm">{lang}</label>
@@ -107,7 +106,7 @@ export default function CreateChauffeur() {
               <div className="space-y-3">
                 <label className="text-sm font-medium">{t('chauffeurs.zones')}</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {['Paris', 'Île-de-France', 'CDG', 'Orly', 'Banlieue', 'Province'].map(zone => (
+                  {['Marseille', 'Nice', 'Cannes', 'Monaco', 'Aix-en-Provence', 'Saint-Tropez', 'Toulon', 'Montpellier', 'Avignon', 'Antibes', 'Menton', 'Grasse', 'Hyères', 'Fréjus', 'Vence', 'Provence', 'Côte d\'Azur', 'Var'].map(zone => (
                     <div key={zone} className="flex items-center gap-2">
                       <Checkbox checked={formData.zones.includes(zone)} onCheckedChange={() => handleCheckbox('zones', zone)} />
                       <label className="text-sm">{zone}</label>

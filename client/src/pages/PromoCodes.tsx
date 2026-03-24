@@ -1,212 +1,220 @@
-import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Tag, ToggleLeft, ToggleRight, Percent, Euro } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { Loader2, Plus, Percent, Copy, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 export default function PromoCodes() {
-  const { data: codes = [], isLoading, refetch } = trpc.promoCodes.list.useQuery();
-  const createMutation = trpc.promoCodes.create.useMutation({
-    onSuccess: () => { refetch(); setShowForm(false); setForm({ code: '', type: 'pourcentage', value: '', minAmount: '', maxUses: '', expiresAt: '', description: '' }); },
-  });
-  const toggleMutation = trpc.promoCodes.toggle.useMutation({ onSuccess: () => refetch() });
+  const { t } = useLanguage();
+  const [isLoading] = useState(false);
+  const [copied, setCopied] = useState<number | null>(null);
 
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ code: '', type: 'pourcentage', value: '', minAmount: '', maxUses: '', expiresAt: '', description: '' });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.code || !form.value) return;
-    createMutation.mutate({
-      code: form.code.toUpperCase(),
-      type: form.type as any,
-      value: parseFloat(form.value),
-      minAmount: form.minAmount ? parseFloat(form.minAmount) : undefined,
-      maxUses: form.maxUses ? parseInt(form.maxUses) : undefined,
+  // Mock promo codes data
+  const promoCodes = [
+    {
+      id: 1,
+      code: 'WELCOME20',
+      discount: 20,
+      type: 'percentage',
+      description: 'Bienvenue - 20% de réduction',
+      usageLimit: 100,
+      usageCount: 45,
+      expiryDate: '2026-06-30',
       active: true,
-      expiresAt: form.expiresAt || undefined,
-      description: form.description || undefined,
-    });
+      applicableTo: 'all',
+    },
+    {
+      id: 2,
+      code: 'SUMMER15',
+      discount: 15,
+      type: 'percentage',
+      description: 'Offre été - 15% de réduction',
+      usageLimit: 200,
+      usageCount: 128,
+      expiryDate: '2026-08-31',
+      active: true,
+      applicableTo: 'missions',
+    },
+    {
+      id: 3,
+      code: 'FIXED10',
+      discount: 1000,
+      type: 'fixed',
+      description: 'Réduction fixe - 10€',
+      usageLimit: 50,
+      usageCount: 50,
+      expiryDate: '2026-04-30',
+      active: false,
+      applicableTo: 'all',
+    },
+    {
+      id: 4,
+      code: 'CORPORATE25',
+      discount: 25,
+      type: 'percentage',
+      description: 'Tarif corporate - 25% de réduction',
+      usageLimit: null,
+      usageCount: 312,
+      expiryDate: '2026-12-31',
+      active: true,
+      applicableTo: 'corporate',
+    },
+  ];
+
+  const copyToClipboard = (code: string, id: number) => {
+    navigator.clipboard.writeText(code);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
   };
 
-  const activeCount = (codes as any[]).filter((c: any) => c.active).length;
-  const totalUses = (codes as any[]).reduce((s: number, c: any) => s + (c.usedCount || 0), 0);
+  const getUsagePercentage = (code: any) => {
+    if (!code.usageLimit) return 0;
+    return (code.usageCount / code.usageLimit) * 100;
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Tag className="h-6 w-6" />
-              Codes promotionnels
-            </h1>
-            <p className="text-muted-foreground mt-1">{(codes as any[]).length} codes enregistres</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('promoCodes.title')}</h1>
+            <p className="text-muted-foreground mt-2">{t('promoCodes.description')}</p>
           </div>
-          <Button onClick={() => setShowForm(!showForm)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau code
+          <Button size="lg" className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t('promoCodes.new')}
           </Button>
         </div>
 
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <Tag className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Codes actifs</p>
-                  <p className="text-2xl font-bold text-green-600">{activeCount}</p>
-                </div>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">{t('promoCodes.active')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {promoCodes.filter((c) => c.active).length}
               </div>
             </CardContent>
           </Card>
+
           <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Percent className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total codes</p>
-                  <p className="text-2xl font-bold">{(codes as any[]).length}</p>
-                </div>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">{t('promoCodes.totalUsage')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {promoCodes.reduce((sum, c) => sum + c.usageCount, 0)}
               </div>
             </CardContent>
           </Card>
+
           <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                  <Euro className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Utilisations totales</p>
-                  <p className="text-2xl font-bold">{totalUses}</p>
-                </div>
-              </div>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">{t('promoCodes.totalSavings')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">€2,450</div>
             </CardContent>
           </Card>
         </div>
 
-        {showForm && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Creer un code promotionnel</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Code *</Label>
-                  <Input placeholder="BIENVENUE20" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} required />
-                </div>
-                <div>
-                  <Label>Type de reduction *</Label>
-                  <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pourcentage">Pourcentage (%)</SelectItem>
-                      <SelectItem value="montant">Montant fixe (EUR)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Valeur * {form.type === 'pourcentage' ? '(%)' : '(EUR)'}</Label>
-                  <Input type="number" placeholder={form.type === 'pourcentage' ? '20' : '50'} value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} required />
-                </div>
-                <div>
-                  <Label>Montant minimum (EUR)</Label>
-                  <Input type="number" placeholder="100" value={form.minAmount} onChange={e => setForm(f => ({ ...f, minAmount: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Nombre max d'utilisations</Label>
-                  <Input type="number" placeholder="50" value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Date d'expiration</Label>
-                  <Input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} />
-                </div>
-                <div className="md:col-span-2">
-                  <Label>Description</Label>
-                  <Input placeholder="Ex: Reduction bienvenue pour nouveaux clients" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-                </div>
-                <div className="md:col-span-2 flex gap-2">
-                  <Button type="submit" disabled={createMutation.isPending}>Creer le code</Button>
-                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
+        {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {!isLoading && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Liste des codes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(codes as any[]).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Tag className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Aucun code promotionnel</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {(codes as any[]).map((code: any) => (
-                    <div key={code.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${code.active ? 'bg-green-100' : 'bg-gray-100'}`}>
-                          <Tag className={`h-5 w-5 ${code.active ? 'text-green-600' : 'text-gray-400'}`} />
+        {/* Promo Codes List */}
+        {!isLoading && promoCodes.length > 0 && (
+          <div className="space-y-3">
+            {promoCodes.map((promoCode) => (
+              <Card key={promoCode.id} className="hover:shadow-lg transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-bold font-mono">{promoCode.code}</h3>
+                          <Badge variant={promoCode.active ? 'default' : 'secondary'}>
+                            {promoCode.active ? t('common.active') : t('common.inactive')}
+                          </Badge>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-sm tracking-wider">{code.code}</span>
-                            <Badge className={code.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
-                              {code.active ? 'Actif' : 'Inactif'}
-                            </Badge>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {promoCode.description}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Percent className="h-4 w-4" />
+                            <span>
+                              {promoCode.type === 'percentage'
+                                ? `${promoCode.discount}%`
+                                : `€${(promoCode.discount / 100).toFixed(2)}`}
+                            </span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{code.description}</p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>Min: {code.minAmount} EUR</span>
-                            <span>Utilisations: {code.usedCount}/{code.maxUses}</span>
-                            {code.expiresAt && <span>Expire: {new Date(code.expiresAt).toLocaleDateString('fr-FR')}</span>}
-                          </div>
+                          <span className="text-muted-foreground">
+                            {t('promoCodes.expiry')}: {new Date(promoCode.expiryDate).toLocaleDateString('fr-FR')}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-lg">
-                          {code.type === 'pourcentage' ? `${code.value}%` : `${code.value} EUR`}
-                        </span>
+
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
-                          variant="ghost"
-                          onClick={() => toggleMutation.mutate({ id: code.id, active: !code.active })}
-                          className="text-xs"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() => copyToClipboard(promoCode.code, promoCode.id)}
                         >
-                          {code.active ? (
-                            <ToggleRight className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <ToggleLeft className="h-5 w-5 text-gray-400" />
-                          )}
+                          <Copy className="h-4 w-4" />
+                          {copied === promoCode.id ? t('promoCodes.copied') : t('common.copy')}
+                        </Button>
+                        <Button size="sm" variant="ghost">
+                          {t('common.edit')}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-600">
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    {/* Usage Bar */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">{t('promoCodes.usage')}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {promoCode.usageCount}
+                          {promoCode.usageLimit ? ` / ${promoCode.usageLimit}` : '+'}
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 transition-all"
+                          style={{
+                            width: `${Math.min(getUsagePercentage(promoCode), 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && promoCodes.length === 0 && (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Percent className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">{t('common.noData')}</h3>
+              <p className="text-muted-foreground mt-2">{t('promoCodes.noPromoCodes')}</p>
             </CardContent>
           </Card>
         )}

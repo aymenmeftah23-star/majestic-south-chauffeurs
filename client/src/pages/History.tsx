@@ -22,21 +22,35 @@ export default function History() {
   });
 
   const statuses = [
-    { value: 'all', label: 'Tous' },
-    { value: 'terminee', label: 'Terminée' },
-    { value: 'en_cours', label: 'En cours' },
-    { value: 'a_confirmer', label: 'À confirmer' },
-    { value: 'planifiee', label: 'Planifiée' },
-    { value: 'annulee', label: 'Annulée' },
+    { value: 'all', label: t('common.all') },
+    { value: 'a_confirmer', label: t('missions.status.a_confirmer') },
+    { value: 'confirmee', label: t('missions.status.confirmee') },
+    { value: 'en_preparation', label: t('missions.status.en_preparation') },
+    { value: 'chauffeur_assigne', label: t('missions.status.chauffeur_assigne') },
+    { value: 'vehicule_assigne', label: t('missions.status.vehicule_assigne') },
+    { value: 'prete', label: t('missions.status.prete') },
+    { value: 'en_cours', label: t('missions.status.en_cours') },
+    { value: 'client_pris_en_charge', label: t('missions.status.client_pris_en_charge') },
+    { value: 'terminee', label: t('missions.status.terminee') },
+    { value: 'annulee', label: t('missions.status.annulee') },
+    { value: 'litige', label: t('missions.status.litige') },
+    { value: 'planifiee', label: t('missions.status.planifiee') },
   ];
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
+      a_confirmer: 'bg-yellow-100 text-yellow-800',
+      confirmee: 'bg-blue-100 text-blue-800',
+      en_preparation: 'bg-purple-100 text-purple-800',
+      chauffeur_assigne: 'bg-indigo-100 text-indigo-800',
+      vehicule_assigne: 'bg-cyan-100 text-cyan-800',
+      prete: 'bg-teal-100 text-teal-800',
+      en_cours: 'bg-orange-100 text-orange-800',
+      client_pris_en_charge: 'bg-lime-100 text-lime-800',
       terminee: 'bg-green-100 text-green-800',
       annulee: 'bg-red-100 text-red-800',
-      en_cours: 'bg-blue-100 text-blue-800',
+      litige: 'bg-rose-100 text-rose-800',
       planifiee: 'bg-yellow-100 text-yellow-800',
-      a_confirmer: 'bg-orange-100 text-orange-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };

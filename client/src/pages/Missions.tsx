@@ -7,26 +7,26 @@ import { MapPin, Plus, Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Dow
 const GOLD = "#C9A84C";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  a_confirmer:          { label: "A confirmer",       color: "text-yellow-600 dark:text-yellow-400",  bg: "bg-yellow-50 dark:bg-yellow-900/20" },
-  confirmee:            { label: "Confirmee",          color: "text-blue-600 dark:text-blue-400",      bg: "bg-blue-50 dark:bg-blue-900/20" },
-  en_preparation:       { label: "En preparation",     color: "text-purple-600 dark:text-purple-400",  bg: "bg-purple-50 dark:bg-purple-900/20" },
-  chauffeur_assigne:    { label: "Chauffeur assigne",  color: "text-indigo-600 dark:text-indigo-400",  bg: "bg-indigo-50 dark:bg-indigo-900/20" },
-  vehicule_assigne:     { label: "Vehicule assigne",   color: "text-cyan-600 dark:text-cyan-400",      bg: "bg-cyan-50 dark:bg-cyan-900/20" },
-  prete:                { label: "Prete",              color: "text-teal-600 dark:text-teal-400",      bg: "bg-teal-50 dark:bg-teal-900/20" },
+  a_confirmer:          { label: "À confirmer",        color: "text-yellow-600 dark:text-yellow-400",  bg: "bg-yellow-50 dark:bg-yellow-900/20" },
+  confirmee:            { label: "Confirmée",          color: "text-blue-600 dark:text-blue-400",      bg: "bg-blue-50 dark:bg-blue-900/20" },
+  en_preparation:       { label: "En préparation",     color: "text-purple-600 dark:text-purple-400",  bg: "bg-purple-50 dark:bg-purple-900/20" },
+  chauffeur_assigne:    { label: "Chauffeur assigné",  color: "text-indigo-600 dark:text-indigo-400",  bg: "bg-indigo-50 dark:bg-indigo-900/20" },
+  vehicule_assigne:     { label: "Véhicule assigné",   color: "text-cyan-600 dark:text-cyan-400",      bg: "bg-cyan-50 dark:bg-cyan-900/20" },
+  prete:                { label: "Prête",              color: "text-teal-600 dark:text-teal-400",      bg: "bg-teal-50 dark:bg-teal-900/20" },
   en_cours:             { label: "En cours",           color: "text-orange-600 dark:text-orange-400",  bg: "bg-orange-50 dark:bg-orange-900/20" },
-  client_pris_en_charge:{ label: "Client pris",        color: "text-lime-600 dark:text-lime-400",      bg: "bg-lime-50 dark:bg-lime-900/20" },
-  terminee:             { label: "Terminee",           color: "text-green-600 dark:text-green-400",    bg: "bg-green-50 dark:bg-green-900/20" },
-  annulee:              { label: "Annulee",            color: "text-red-600 dark:text-red-400",        bg: "bg-red-50 dark:bg-red-900/20" },
+  client_pris_en_charge:{ label: "Client pris en charge", color: "text-lime-600 dark:text-lime-400",  bg: "bg-lime-50 dark:bg-lime-900/20" },
+  terminee:             { label: "Terminée",           color: "text-green-600 dark:text-green-400",    bg: "bg-green-50 dark:bg-green-900/20" },
+  annulee:              { label: "Annulée",            color: "text-red-600 dark:text-red-400",        bg: "bg-red-50 dark:bg-red-900/20" },
   litige:               { label: "Litige",             color: "text-rose-600 dark:text-rose-400",      bg: "bg-rose-50 dark:bg-rose-900/20" },
 };
 
 const TABS = [
   { key: "all", label: "Toutes" },
-  { key: "a_confirmer", label: "A confirmer" },
-  { key: "confirmee", label: "Confirmees" },
+  { key: "a_confirmer", label: "À confirmer" },
+  { key: "confirmee", label: "Confirmées" },
   { key: "en_cours", label: "En cours" },
-  { key: "terminee", label: "Terminees" },
-  { key: "annulee", label: "Annulees" },
+  { key: "terminee", label: "Terminées" },
+  { key: "annulee", label: "Annulées" },
 ];
 
 export default function Missions() {
@@ -173,7 +173,7 @@ export default function Missions() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                             <User className="h-3 w-3" />
-                            {m.chauffeurName ?? <span className="italic text-gray-400">Non assigne</span>}
+                            {m.chauffeurName ?? <span className="italic text-gray-400">Non assigné</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3">

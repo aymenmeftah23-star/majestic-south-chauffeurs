@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,7 +23,7 @@ export default function CreateDemand() {
 
   const createMutation = trpc.demands.create.useMutation({
     onSuccess: () => navigate('/demands'),
-    onError: (err) => toast.error('Erreur : ' + err.message),
+    onError: (err) => alert('Erreur : ' + err.message),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -33,7 +32,7 @@ export default function CreateDemand() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.clientId) { toast.error('Veuillez sélectionner un client'); return; }
+    if (!formData.clientId) { alert('Veuillez sélectionner un client'); return; }
     const dateTime = formData.date && formData.time ? `${formData.date}T${formData.time}:00` : formData.date;
     createMutation.mutate({
       clientId: parseInt(formData.clientId),

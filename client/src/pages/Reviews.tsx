@@ -1,144 +1,213 @@
+import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, MessageSquare, TrendingUp, Award } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star key={i} className={`h-4 w-4 ${i <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
-      ))}
-    </div>
-  );
-}
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2, Star, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Reviews() {
-  const { data: reviews = [], isLoading } = trpc.reviews.list.useQuery();
-  const avgRating = (reviews as any[]).length > 0
-    ? (reviews as any[]).reduce((s: number, r: any) => s + r.rating, 0) / (reviews as any[]).length
+  const { t } = useLanguage();
+  const [isLoading] = useState(false);
+  const [newReview, setNewReview] = useState('');
+  const [newRating, setNewRating] = useState(5);
+
+  // Mock reviews data
+  const reviews = [
+    {
+      id: 1,
+      missionId: 'M-2026-045',
+      chauffeur: 'Jean Dupont',
+      rating: 5,
+      comment: 'Excellent service! Très professionnel et ponctuel.',
+      date: '2026-03-23',
+      verified: true,
+    },
+    {
+      id: 2,
+      missionId: 'M-2026-044',
+      chauffeur: 'Marie Martin',
+      rating: 4,
+      comment: 'Bon service, véhicule confortable. Petit retard de 5 minutes.',
+      date: '2026-03-22',
+      verified: true,
+    },
+    {
+      id: 3,
+      missionId: 'M-2026-043',
+      chauffeur: 'Pierre Durand',
+      rating: 5,
+      comment: 'Parfait! Je recommande vivement Majestic South Chauffeurs.',
+      date: '2026-03-21',
+      verified: true,
+    },
+  ];
+
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : 0;
-  const fiveStars = (reviews as any[]).filter((r: any) => r.rating === 5).length;
-  const fourStars = (reviews as any[]).filter((r: any) => r.rating === 4).length;
+
+  const renderStars = (rating: number) => {
+    return (
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-4 w-4 ${
+              star <= rating
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'text-muted-foreground'
+            }`}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Star className="h-6 w-6 fill-amber-400 text-amber-400" />
-            Avis clients
-          </h1>
-          <p className="text-muted-foreground mt-1">{(reviews as any[]).length} avis reçus</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('reviews.title')}</h1>
+          <p className="text-muted-foreground mt-2">{t('reviews.description')}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card><CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Note moyenne</p>
-                <p className="text-2xl font-bold">{avgRating.toFixed(1)} / 5</p>
-              </div>
-            </div>
-          </CardContent></Card>
-          <Card><CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total avis</p>
-                <p className="text-2xl font-bold">{(reviews as any[]).length}</p>
-              </div>
-            </div>
-          </CardContent></Card>
-          <Card><CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <Award className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">5 étoiles</p>
-                <p className="text-2xl font-bold text-amber-600">{fiveStars}</p>
-              </div>
-            </div>
-          </CardContent></Card>
-          <Card><CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">4 étoiles</p>
-                <p className="text-2xl font-bold text-blue-600">{fourStars}</p>
-              </div>
-            </div>
-          </CardContent></Card>
-        </div>
-
+        {/* Rating Summary */}
         <Card>
-          <CardHeader><CardTitle className="text-base">Répartition des notes</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {[5, 4, 3, 2, 1].map(star => {
-                const count = (reviews as any[]).filter((r: any) => r.rating === star).length;
-                const pct = (reviews as any[]).length > 0 ? (count / (reviews as any[]).length) * 100 : 0;
-                return (
-                  <div key={star} className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 w-16">
-                      <span className="text-sm font-medium">{star}</span>
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    </div>
-                    <div className="flex-1 bg-muted rounded-full h-2">
-                      <div className="bg-amber-400 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="text-sm text-muted-foreground w-8 text-right">{count}</span>
-                  </div>
-                );
-              })}
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-8">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">{t('reviews.averageRating')}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">{averageRating}</span>
+                  <span className="text-muted-foreground">/5</span>
+                </div>
+                <div className="mt-2">{renderStars(Math.round(parseFloat(averageRating as string)))}</div>
+              </div>
+
+              <div className="flex-1">
+                <div className="space-y-2">
+                  {[5, 4, 3, 2, 1].map((rating) => {
+                    const count = reviews.filter((r) => r.rating === rating).length;
+                    const percentage = (count / reviews.length) * 100;
+                    return (
+                      <div key={rating} className="flex items-center gap-2">
+                        <span className="text-sm w-8">{rating}★</span>
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-yellow-400"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm text-muted-foreground w-8 text-right">
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {isLoading && <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}
+        {/* Write Review */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              {t('reviews.writeReview')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">{t('reviews.rating')}</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setNewRating(star)}
+                    className="focus:outline-none"
+                  >
+                    <Star
+                      className={`h-6 w-6 cursor-pointer transition-colors ${
+                        star <= newRating
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-muted-foreground hover:text-yellow-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {!isLoading && (
-          <div className="space-y-4">
-            {(reviews as any[]).length === 0 ? (
-              <Card><CardContent className="flex flex-col items-center justify-center py-12">
-                <Star className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Aucun avis pour le moment</p>
-              </CardContent></Card>
-            ) : (
-              (reviews as any[]).map((review: any) => (
-                <Card key={review.id}>
-                  <CardContent className="pt-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <span className="text-sm font-bold text-primary">{(review.clientName || 'C').charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-sm">{review.clientName}</span>
-                            <span className="text-xs text-muted-foreground font-mono">{review.missionNumber}</span>
-                          </div>
-                          <StarRating rating={review.rating} />
-                          {review.comment && <p className="text-sm text-muted-foreground mt-2 leading-relaxed">"{review.comment}"</p>}
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground shrink-0">
-                        {new Date(review.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+            <div>
+              <label className="text-sm font-medium mb-2 block">{t('reviews.comment')}</label>
+              <Textarea
+                placeholder={t('reviews.commentPlaceholder')}
+                value={newReview}
+                onChange={(e) => setNewReview(e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            <Button>{t('reviews.submit')}</Button>
+          </CardContent>
+        </Card>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
+        )}
+
+        {/* Reviews List */}
+        {!isLoading && reviews.length > 0 && (
+          <div className="space-y-3">
+            {reviews.map((review) => (
+              <Card key={review.id} className="hover:shadow-lg transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold">{review.chauffeur}</h3>
+                          {review.verified && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                              {t('reviews.verified')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {t('reviews.mission')}: {review.missionId}
+                        </p>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(review.date).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
+
+                    <div>{renderStars(review.rating)}</div>
+
+                    <p className="text-sm">{review.comment}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && reviews.length === 0 && (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Star className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">{t('common.noData')}</h3>
+              <p className="text-muted-foreground mt-2">{t('reviews.noReviews')}</p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </DashboardLayout>

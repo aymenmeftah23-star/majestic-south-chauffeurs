@@ -1,241 +1,265 @@
-import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Award, TrendingUp, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  en_attente: { label: 'En attente', color: 'bg-yellow-100 text-yellow-800' },
-  verse: { label: 'Verse', color: 'bg-green-100 text-green-800' },
-  annule: { label: 'Annule', color: 'bg-red-100 text-red-800' },
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  performance: 'Performance',
-  avis: 'Avis clients',
-  missions: 'Volume missions',
-  special: 'Special',
-};
+import { Loader2, Plus, TrendingUp, Gift, Target, DollarSign } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Bonuses() {
-  const { data: bonuses = [], isLoading, refetch } = trpc.bonuses.list.useQuery();
-  const { data: chauffeurs = [] } = trpc.chauffeurs.list.useQuery();
-  const createMutation = trpc.bonuses.create.useMutation({
-    onSuccess: () => {
-      refetch();
-      setShowForm(false);
-      setForm({ chauffeurId: '', type: 'performance', amount: '', month: '', description: '' });
+  const { t } = useLanguage();
+  const [isLoading] = useState(false);
+
+  // Mock bonus data
+  const bonusPrograms = [
+    {
+      id: 1,
+      name: 'Performance Excellence',
+      type: 'rating',
+      description: 'Bonus pour les chauffeurs avec note ≥ 4.8',
+      criteria: 'Note moyenne ≥ 4.8',
+      amount: 50000,
+      currency: 'EUR',
+      active: true,
+      chauffeurCount: 12,
+      totalPaid: 600000,
     },
-  });
-  const updateStatusMutation = trpc.bonuses.updateStatus.useMutation({ onSuccess: () => refetch() });
+    {
+      id: 2,
+      name: 'Mission Completion',
+      type: 'missions',
+      description: 'Bonus pour 100+ missions complétées par mois',
+      criteria: '100+ missions/mois',
+      amount: 100000,
+      currency: 'EUR',
+      active: true,
+      chauffeurCount: 8,
+      totalPaid: 800000,
+    },
+    {
+      id: 3,
+      name: 'Zero Cancellation',
+      type: 'cancellation',
+      description: 'Bonus pour zéro annulation sur 30 jours',
+      criteria: '0 annulation/30j',
+      amount: 75000,
+      currency: 'EUR',
+      active: true,
+      chauffeurCount: 15,
+      totalPaid: 1125000,
+    },
+    {
+      id: 4,
+      name: 'Referral Program',
+      type: 'referral',
+      description: 'Commission pour chaque nouveau chauffeur recruté',
+      criteria: 'Par chauffeur recruté',
+      amount: 150000,
+      currency: 'EUR',
+      active: false,
+      chauffeurCount: 5,
+      totalPaid: 750000,
+    },
+  ];
 
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ chauffeurId: '', type: 'performance', amount: '', month: '', description: '' });
+  const chauffeurBonuses = [
+    {
+      chauffeurId: 1,
+      name: 'Jean Dupont',
+      rating: 4.9,
+      missions: 1250,
+      cancellations: 0,
+      totalBonusEarned: 225000,
+      thisMonth: 50000,
+      programs: ['Performance Excellence', 'Mission Completion', 'Zero Cancellation'],
+    },
+    {
+      chauffeurId: 2,
+      name: 'Marie Martin',
+      rating: 4.8,
+      missions: 980,
+      cancellations: 2,
+      totalBonusEarned: 175000,
+      thisMonth: 50000,
+      programs: ['Performance Excellence', 'Zero Cancellation'],
+    },
+    {
+      chauffeurId: 3,
+      name: 'Pierre Durand',
+      rating: 4.7,
+      missions: 1100,
+      cancellations: 1,
+      totalBonusEarned: 150000,
+      thisMonth: 25000,
+      programs: ['Mission Completion'],
+    },
+  ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.chauffeurId || !form.amount || !form.month) return;
-    createMutation.mutate({
-      chauffeurId: parseInt(form.chauffeurId),
-      type: form.type as any,
-      amount: parseFloat(form.amount),
-      month: form.month,
-      description: form.description || undefined,
-      status: 'en_attente',
-    });
-  };
-
-  const totalVerse = (bonuses as any[]).filter((b: any) => b.status === 'verse').reduce((s: number, b: any) => s + b.amount, 0);
-  const totalEnAttente = (bonuses as any[]).filter((b: any) => b.status === 'en_attente').reduce((s: number, b: any) => s + b.amount, 0);
+  const totalBonusesThisMonth = chauffeurBonuses.reduce((sum, c) => sum + c.thisMonth, 0);
+  const totalBonusesPaid = bonusPrograms.reduce((sum, p) => sum + p.totalPaid, 0);
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Award className="h-6 w-6" />
-              Primes chauffeurs
-            </h1>
-            <p className="text-muted-foreground mt-1">{(bonuses as any[]).length} primes enregistrees</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('bonuses.title')}</h1>
+            <p className="text-muted-foreground mt-2">{t('bonuses.description')}</p>
           </div>
-          <Button onClick={() => setShowForm(!showForm)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle prime
+          <Button size="lg" className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t('bonuses.new')}
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total verse</p>
-                  <p className="text-2xl font-bold text-green-600">{totalVerse} EUR</p>
+                  <p className="text-sm text-muted-foreground">Programmes actifs</p>
+                  <p className="text-2xl font-bold">{bonusPrograms.filter(p => p.active).length}</p>
                 </div>
+                <Target className="h-8 w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
+
           <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                </div>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">En attente de versement</p>
-                  <p className="text-2xl font-bold text-yellow-600">{totalEnAttente} EUR</p>
+                  <p className="text-sm text-muted-foreground">Ce mois</p>
+                  <p className="text-2xl font-bold">€{(totalBonusesThisMonth / 100).toFixed(2)}</p>
                 </div>
+                <DollarSign className="h-8 w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
+
           <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                </div>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Nombre de primes</p>
-                  <p className="text-2xl font-bold">{(bonuses as any[]).length}</p>
+                  <p className="text-sm text-muted-foreground">Total payé</p>
+                  <p className="text-2xl font-bold">€{(totalBonusesPaid / 100).toFixed(2)}</p>
                 </div>
+                <TrendingUp className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Chauffeurs</p>
+                  <p className="text-2xl font-bold">{chauffeurBonuses.length}</p>
+                </div>
+                <Gift className="h-8 w-8 text-orange-500" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {showForm && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Attribuer une prime</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Chauffeur *</Label>
-                  <Select value={form.chauffeurId} onValueChange={v => setForm(f => ({ ...f, chauffeurId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Selectionner un chauffeur" /></SelectTrigger>
-                    <SelectContent>
-                      {(chauffeurs as any[]).map((c: any) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Type de prime *</Label>
-                  <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="performance">Performance</SelectItem>
-                      <SelectItem value="avis">Avis clients</SelectItem>
-                      <SelectItem value="missions">Volume missions</SelectItem>
-                      <SelectItem value="special">Special</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Montant (EUR) *</Label>
-                  <Input type="number" placeholder="150" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} required />
-                </div>
-                <div>
-                  <Label>Mois *</Label>
-                  <Input type="month" value={form.month} onChange={e => setForm(f => ({ ...f, month: e.target.value }))} required />
-                </div>
-                <div className="md:col-span-2">
-                  <Label>Description</Label>
-                  <Input placeholder="Ex: Bonus performance - 98% ponctualite" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-                </div>
-                <div className="md:col-span-2 flex gap-2">
-                  <Button type="submit" disabled={createMutation.isPending}>Attribuer la prime</Button>
-                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+        {/* Bonus Programs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('bonuses.programs')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {bonusPrograms.map((program) => (
+                <div key={program.id} className="p-4 border rounded-lg hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold">{program.name}</h3>
+                        <Badge className={program.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          {program.active ? 'Actif' : 'Inactif'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{program.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold">€{(program.amount / 100).toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">par chauffeur</p>
+                    </div>
+                  </div>
 
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        )}
+                  <div className="grid grid-cols-3 gap-4 mb-3 p-3 bg-muted rounded">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Critères</p>
+                      <p className="font-semibold text-sm">{program.criteria}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Chauffeurs éligibles</p>
+                      <p className="font-semibold text-sm">{program.chauffeurCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total payé</p>
+                      <p className="font-semibold text-sm">€{(program.totalPaid / 100).toFixed(2)}</p>
+                    </div>
+                  </div>
 
-        {!isLoading && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Historique des primes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(bonuses as any[]).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Award className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Aucune prime enregistree</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline">Modifier</Button>
+                    <Button size="sm" variant="outline">Détails</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Chauffeur Bonuses */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('bonuses.chauffeurBonuses')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {(bonuses as any[]).map((bonus: any) => {
-                    const statusInfo = STATUS_LABELS[bonus.status] || STATUS_LABELS.en_attente;
-                    return (
-                      <div key={bonus.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <span className="text-sm font-bold text-primary">
-                              {(bonus.chauffeurName || 'C').charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{bonus.chauffeurName}</p>
-                            <p className="text-xs text-muted-foreground">{bonus.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">{TYPE_LABELS[bonus.type] || bonus.type}</Badge>
-                              <span className="text-xs text-muted-foreground">{bonus.month}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-lg">{bonus.amount} EUR</span>
-                          {bonus.status === 'en_attente' ? (
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-green-600 border-green-200 hover:bg-green-50 text-xs h-7"
-                                onClick={() => updateStatusMutation.mutate({ id: bonus.id, status: 'verse' })}
-                              >
-                                Marquer verse
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-red-500 text-xs h-7"
-                                onClick={() => updateStatusMutation.mutate({ id: bonus.id, status: 'annule' })}
-                              >
-                                Annuler
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
-                              {statusInfo.label}
-                            </span>
-                          )}
-                        </div>
+                chauffeurBonuses.map((bonus) => (
+                  <div key={bonus.chauffeurId} className="p-4 border rounded-lg">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold">{bonus.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {bonus.missions} missions • Note: {bonus.rating}★
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">€{(bonus.thisMonth / 100).toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">ce mois</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {bonus.programs.map((prog) => (
+                        <Badge key={prog} variant="outline" className="text-xs">
+                          {prog}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total gagné: €{(bonus.totalBonusEarned / 100).toFixed(2)}</span>
+                      <Button size="sm" variant="ghost">Détails</Button>
+                    </div>
+                  </div>
+                ))
               )}
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

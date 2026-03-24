@@ -7,14 +7,10 @@ import { UserCheck, Plus, Search, Eye, Edit, Trash2, ChevronLeft, ChevronRight, 
 const GOLD = "#C9A84C";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  disponible:    { label: "Disponible",  color: "text-green-600 dark:text-green-400",  dot: "bg-green-500" },
-  en_mission:    { label: "En mission",  color: "text-blue-600 dark:text-blue-400",    dot: "bg-blue-500" },
-  indisponible:  { label: "Indisponible", color: "text-red-600 dark:text-red-400",     dot: "bg-red-500" },
-  repos:         { label: "Repos",       color: "text-gray-500 dark:text-gray-400",    dot: "bg-gray-400" },
-  // Aliases anglais pour compatibilité
-  available:     { label: "Disponible",  color: "text-green-600 dark:text-green-400",  dot: "bg-green-500" },
-  on_mission:    { label: "En mission",  color: "text-blue-600 dark:text-blue-400",    dot: "bg-blue-500" },
-  unavailable:   { label: "Indisponible", color: "text-red-600 dark:text-red-400",     dot: "bg-red-500" },
+  available:   { label: "Disponible",  color: "text-green-600 dark:text-green-400",  dot: "bg-green-500" },
+  on_mission:  { label: "En mission",  color: "text-blue-600 dark:text-blue-400",    dot: "bg-blue-500" },
+  unavailable: { label: "Indisponible", color: "text-red-600 dark:text-red-400",     dot: "bg-red-500" },
+  off:         { label: "Repos",       color: "text-gray-500 dark:text-gray-400",    dot: "bg-gray-400" },
 };
 
 export default function Chauffeurs() {
@@ -27,9 +23,22 @@ export default function Chauffeurs() {
   const deleteMutation = trpc.chauffeurs.delete.useMutation({ onSuccess: () => refetch() });
 
   const chauffeurs: any[] = data ?? [];
+
+  // Normalisation des statuts (la BDD utilise 'disponible', 'en_mission', 'indisponible')
+  const normalizeStatus = (s: string) => {
+    if (!s) return 'available';
+    const map: Record<string, string> = {
+      disponible: 'available', available: 'available',
+      en_mission: 'on_mission', on_mission: 'on_mission', occupe: 'on_mission',
+      indisponible: 'unavailable', unavailable: 'unavailable',
+      conge: 'off', off: 'off', suspendu: 'unavailable',
+    };
+    return map[s] ?? 'available';
+  };
+
   const filtered = chauffeurs.filter((c: any) => {
     const matchSearch = !search || (c.name ?? "").toLowerCase().includes(search.toLowerCase()) || (c.email ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
+    const matchStatus = statusFilter === "all" || normalizeStatus(c.status) === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -38,9 +47,9 @@ export default function Chauffeurs() {
 
   const counts: Record<string, number> = {
     all: chauffeurs.length,
-    disponible: chauffeurs.filter((c: any) => c.status === "disponible" || c.status === "available").length,
-    en_mission: chauffeurs.filter((c: any) => c.status === "en_mission" || c.status === "on_mission").length,
-    indisponible: chauffeurs.filter((c: any) => c.status === "indisponible" || c.status === "unavailable").length,
+    available: chauffeurs.filter((c: any) => normalizeStatus(c.status) === "available").length,
+    on_mission: chauffeurs.filter((c: any) => normalizeStatus(c.status) === "on_mission").length,
+    unavailable: chauffeurs.filter((c: any) => normalizeStatus(c.status) === "unavailable").length,
   };
 
   const getInitials = (name: string) => name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "?";
@@ -63,7 +72,7 @@ export default function Chauffeurs() {
         </div>
 
         <div className="flex gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl overflow-x-auto">
-          {[{ key: "all", label: "Tous" }, { key: "disponible", label: "Disponibles" }, { key: "en_mission", label: "En mission" }, { key: "indisponible", label: "Indisponibles" }].map((tab) => (
+          {[{ key: "all", label: "Tous" }, { key: "available", label: "Disponibles" }, { key: "on_mission", label: "En mission" }, { key: "unavailable", label: "Indisponibles" }].map((tab) => (
             <button key={tab.key} onClick={() => { setStatusFilter(tab.key); setPage(1); }}
               className={"flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all " + (statusFilter === tab.key ? "bg-white dark:bg-white/15 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300")}>
               {tab.label}
@@ -103,7 +112,7 @@ export default function Chauffeurs() {
                   </td></tr>
                 ) : (
                   paginated.map((c: any) => {
-                    const sc = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.disponible;
+                    const sc = STATUS_CONFIG[normalizeStatus(c.status)] ?? STATUS_CONFIG.available;
                     return (
                       <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
                         <td className="px-4 py-3">

@@ -24,14 +24,13 @@ export default function Demands() {
   const [priorityFilter, setPriorityFilter] = useState('all');
 
   const statuses = [
-    { value: 'nouvelle', label: 'Nouvelle' },
-    { value: 'a_traiter', label: 'À traiter' },
-    { value: 'devis_envoye', label: 'Devis envoyé' },
-    { value: 'en_attente', label: 'En attente' },
-    { value: 'confirmee', label: 'Confirmée' },
-    { value: 'convertie', label: 'Convertie' },
-    { value: 'refusee', label: 'Refusée' },
-    { value: 'annulee', label: 'Annulée' },
+    { value: 'nouvelle', label: t('status.nouvelle') },
+    { value: 'a_traiter', label: t('status.a_traiter') },
+    { value: 'devis_envoye', label: t('status.devis_envoye') },
+    { value: 'en_attente', label: t('status.en_attente') },
+    { value: 'convertie', label: t('status.convertie') },
+    { value: 'refusee', label: t('status.refusee') },
+    { value: 'annulee', label: t('status.annulee') },
   ];
 
   const priorities = [
@@ -58,8 +57,7 @@ export default function Demands() {
       a_traiter: 'bg-yellow-100 text-yellow-800',
       devis_envoye: 'bg-purple-100 text-purple-800',
       en_attente: 'bg-orange-100 text-orange-800',
-      confirmee: 'bg-green-100 text-green-800',
-      convertie: 'bg-teal-100 text-teal-800',
+      convertie: 'bg-green-100 text-green-800',
       refusee: 'bg-red-100 text-red-800',
       annulee: 'bg-gray-100 text-gray-800',
     };
@@ -113,7 +111,7 @@ export default function Demands() {
                 <label className="text-sm font-medium mb-2 block">{t('common.status')}</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Tous les statuts" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
@@ -130,7 +128,7 @@ export default function Demands() {
                 <label className="text-sm font-medium mb-2 block">{t('demands.priority')}</label>
                 <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Toutes les priorités" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes les priorités</SelectItem>

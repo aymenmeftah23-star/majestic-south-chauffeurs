@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,15 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Euro, CheckCircle, XCircle, ArrowRight, Loader2, Trash2 } from 'lucide-react';
 import { useLocation, useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
+
+const STATUS_LABELS: Record<string, string> = {
+  brouillon: 'Brouillon',
+  envoye: 'Envoyé',
+  consulte: 'Consulté',
+  accepte: 'Accepté',
+  refuse: 'Refusé',
+  expire: 'Expiré',
+};
 
 const STATUS_COLORS: Record<string, string> = {
   brouillon: 'bg-gray-100 text-gray-800',
@@ -30,10 +38,10 @@ export default function QuoteDetail() {
   const deleteMutation = trpc.quotes.delete.useMutation({ onSuccess: () => navigate('/quotes') });
   const convertMutation = trpc.quotes.convertToMission.useMutation({
     onSuccess: (data) => {
-      toast.success('Mission créée : ' + data.missionNumber);
+      alert('Mission creee : ' + data.missionNumber);
       navigate('/missions');
     },
-    onError: (err) => toast.error('Erreur : ' + err.message),
+    onError: (err) => alert('Erreur : ' + err.message),
   });
 
   if (isLoading) return (
@@ -74,7 +82,7 @@ export default function QuoteDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={STATUS_COLORS[quote.status || 'brouillon']}>{quote.status}</Badge>
+            <Badge className={STATUS_COLORS[quote.status || 'brouillon']}>{STATUS_LABELS[quote.status || 'brouillon'] ?? quote.status}</Badge>
             {quote.status === 'brouillon' && (
               <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id, status: 'envoye' })}>
                 {t('quotes.send')}
@@ -133,7 +141,7 @@ export default function QuoteDetail() {
           <Card>
             <CardHeader><CardTitle>{t('quotes.demand')}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-muted-foreground text-sm">Demande associee #{quote.demandId}</p>
+              <p className="text-muted-foreground text-sm">Demande associée #{quote.demandId}</p>
               <Button variant="outline" size="sm" onClick={() => navigate(`/demands/${quote.demandId}`)}>
                 {t('common.viewDetails')}
               </Button>

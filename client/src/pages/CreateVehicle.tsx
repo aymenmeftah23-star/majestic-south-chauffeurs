@@ -1,4 +1,3 @@
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +22,7 @@ export default function CreateVehicle() {
 
   const createMutation = trpc.vehicles.create.useMutation({
     onSuccess: () => navigate('/vehicles'),
-    onError: (err) => toast.error('Erreur : ' + err.message),
+    onError: (err) => alert('Erreur : ' + err.message),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -92,6 +91,9 @@ export default function CreateVehicle() {
                       <SelectItem value="premium">{t('vehicles.premium')}</SelectItem>
                       <SelectItem value="luxe">{t('vehicles.luxe')}</SelectItem>
                       <SelectItem value="van">{t('vehicles.van')}</SelectItem>
+                      <SelectItem value="suv">SUV Premium</SelectItem>
+                      <SelectItem value="minibus">Minibus (8-16 places)</SelectItem>
+                      <SelectItem value="electrique">⚡ Électrique / Hybride</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -101,8 +103,11 @@ export default function CreateVehicle() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="disponible">{t('vehicles.available')}</SelectItem>
+                      <SelectItem value="reserve">Réservé</SelectItem>
+                      <SelectItem value="en_mission">En mission</SelectItem>
                       <SelectItem value="entretien">{t('status.maintenance')}</SelectItem>
                       <SelectItem value="indisponible">{t('common.inactive')}</SelectItem>
+                      <SelectItem value="hors_service">Hors service</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

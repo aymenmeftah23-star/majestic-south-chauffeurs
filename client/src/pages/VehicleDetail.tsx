@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Car, Calendar, Gauge, Users, Loader2, Trash2, Wrench, Pencil } from 'lucide-react';
+import { ArrowLeft, Car, Calendar, Gauge, Users, Loader2, Trash2, Wrench } from 'lucide-react';
 import { useLocation, useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
@@ -52,9 +52,6 @@ export default function VehicleDetail() {
                 {t('vehicles.available')}
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => navigate(`/vehicles/${id}/edit`)}>
-              <Pencil className="h-4 w-4 mr-1" /> Modifier
-            </Button>
             <Button variant="destructive" size="sm" onClick={() => confirm('Supprimer ?') && deleteMutation.mutate({ id })} disabled={deleteMutation.isPending}>
               <Trash2 className="h-4 w-4" />
             </Button>
