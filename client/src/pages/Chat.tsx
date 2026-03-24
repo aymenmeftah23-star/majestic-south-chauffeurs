@@ -4,109 +4,182 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Send, Search, Phone, Video, MoreVertical } from 'lucide-react';
-import { useState } from 'react';
+import { Send, Search, MessageSquare, User, Loader2, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { trpc } from '@/lib/trpc';
 
-interface Message {
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function formatTime(date: Date | string) {
+  return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(date: Date | string) {
+  const d = new Date(date);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "Aujourd'hui";
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Hier';
+  return d.toLocaleDateString('fr-FR');
+}
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface ChatMsg {
   id: number;
-  sender: string;
-  senderType: 'client' | 'chauffeur' | 'admin';
+  conversationId: string;
+  senderId: number;
+  senderName: string;
+  senderRole: string;
   content: string;
-  timestamp: string;
-  read: boolean;
+  missionId?: number | null;
+  isRead: boolean;
+  createdAt: Date | string;
 }
 
-interface Conversation {
-  id: number;
-  participantName: string;
-  participantType: string;
+interface ConvMeta {
+  conversationId: string;
+  chauffeurId: number;
+  chauffeurName: string;
   lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
-  avatar?: string;
-  online: boolean;
+  lastTime: Date | string | null;
+  unread: number;
 }
+
+// ─── Composant principal ─────────────────────────────────────────────────────
 
 export default function Chat() {
   const { t } = useLanguage();
-  const [selectedConversation, setSelectedConversation] = useState<number>(1);
-  const [messageText, setMessageText] = useState('');
 
-  // Mock conversations
-  const conversations: Conversation[] = [
-    {
-      id: 1,
-      participantName: 'Jean Dupont',
-      participantType: 'Chauffeur',
-      lastMessage: 'Je suis arrivé à destination',
-      lastMessageTime: '14:35',
-      unreadCount: 0,
-      online: true,
-    },
-    {
-      id: 2,
-      participantName: 'Marie Martin',
-      participantType: 'Client',
-      lastMessage: 'Merci pour le service!',
-      lastMessageTime: '13:20',
-      unreadCount: 2,
-      online: false,
-    },
-    {
-      id: 3,
-      participantName: 'Pierre Durand',
-      participantType: 'Chauffeur',
-      lastMessage: 'Quelle est mon prochaine mission?',
-      lastMessageTime: '12:15',
-      unreadCount: 1,
-      online: true,
-    },
-  ];
+  // Identité de l'admin (récupérée depuis localStorage si disponible)
+  const adminId   = parseInt(localStorage.getItem('userId') || '1');
+  const adminName = localStorage.getItem('userName') || 'Admin';
 
-  // Mock messages for selected conversation
-  const messages: Message[] = [
-    {
-      id: 1,
-      sender: 'Jean Dupont',
-      senderType: 'chauffeur',
-      content: 'Bonjour, je suis en route pour vous chercher',
-      timestamp: '14:20',
-      read: true,
-    },
-    {
-      id: 2,
-      sender: 'Vous',
-      senderType: 'client',
-      content: 'Merci! À quelle heure arrivez-vous?',
-      timestamp: '14:22',
-      read: true,
-    },
-    {
-      id: 3,
-      sender: 'Jean Dupont',
-      senderType: 'chauffeur',
-      content: 'J\'arrive dans 5 minutes',
-      timestamp: '14:30',
-      read: true,
-    },
-    {
-      id: 4,
-      sender: 'Jean Dupont',
-      senderType: 'chauffeur',
-      content: 'Je suis arrivé à destination',
-      timestamp: '14:35',
-      read: true,
-    },
-  ];
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [messageText, setMessageText]       = useState('');
+  const [search, setSearch]                 = useState('');
+  const [conversations, setConversations]   = useState<ConvMeta[]>([]);
+  const [messages, setMessages]             = useState<ChatMsg[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const currentConversation = conversations.find((c) => c.id === selectedConversation);
+  // ── Charger la liste des chauffeurs pour construire les conversations ──────
+  const { data: chauffeurs = [] } = trpc.chauffeurs.list.useQuery();
 
-  const handleSendMessage = () => {
-    if (messageText.trim()) {
-      console.log('Sending message:', messageText);
-      setMessageText('');
+  useEffect(() => {
+    if (!chauffeurs || (chauffeurs as any[]).length === 0) return;
+    const convs: ConvMeta[] = (chauffeurs as any[]).map((c: any) => ({
+      conversationId: `admin-chauffeur-${c.id}`,
+      chauffeurId: c.id,
+      chauffeurName: c.name,
+      lastMessage: '',
+      lastTime: null,
+      unread: 0,
+    }));
+    setConversations(convs);
+    if (!selectedConvId && convs.length > 0) setSelectedConvId(convs[0].conversationId);
+  }, [chauffeurs]);
+
+  // ── Charger les messages de la conversation sélectionnée ─────────────────
+  const { data: rawMessages, isLoading: loadingMessages, refetch: refetchMessages } =
+    trpc.chat.getMessages.useQuery(
+      { conversationId: selectedConvId ?? '', limit: 100 },
+      { enabled: !!selectedConvId, refetchInterval: 3000 }
+    );
+
+  useEffect(() => {
+    if (rawMessages) {
+      setMessages(rawMessages as ChatMsg[]);
+      // Mettre à jour le dernier message dans la liste des conversations
+      if ((rawMessages as ChatMsg[]).length > 0) {
+        const last = (rawMessages as ChatMsg[])[(rawMessages as ChatMsg[]).length - 1];
+        setConversations(prev => prev.map(c =>
+          c.conversationId === selectedConvId
+            ? { ...c, lastMessage: last.content, lastTime: last.createdAt, unread: 0 }
+            : c
+        ));
+      }
     }
-  };
+  }, [rawMessages, selectedConvId]);
+
+  // ── Scroll automatique vers le bas ───────────────────────────────────────
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // ── SSE : écouter les nouveaux messages en temps réel ────────────────────
+  useEffect(() => {
+    if (!selectedConvId) return;
+    const url = `/api/notifications/stream?userId=${adminId}`;
+    const es = new EventSource(url);
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'chat_message' && data.data?.conversationId === selectedConvId) {
+          refetchMessages();
+        }
+        if (data.type === 'chat_message') {
+          const convId = data.data?.conversationId;
+          if (convId) {
+            setConversations(prev => prev.map(c =>
+              c.conversationId === convId
+                ? { ...c, lastMessage: data.message, lastTime: new Date(), unread: convId === selectedConvId ? 0 : c.unread + 1 }
+                : c
+            ));
+          }
+        }
+      } catch {}
+    };
+    return () => es.close();
+  }, [selectedConvId, adminId]);
+
+  // ── Marquer les messages comme lus ───────────────────────────────────────
+  const markReadMutation = trpc.chat.markRead.useMutation();
+  useEffect(() => {
+    if (selectedConvId) {
+      markReadMutation.mutate({ conversationId: selectedConvId, userId: adminId });
+      setConversations(prev => prev.map(c =>
+        c.conversationId === selectedConvId ? { ...c, unread: 0 } : c
+      ));
+    }
+  }, [selectedConvId]);
+
+  // ── Envoyer un message ───────────────────────────────────────────────────
+  const sendMutation = trpc.chat.sendMessage.useMutation({
+    onSuccess: (newMsg) => {
+      setMessages(prev => [...prev, newMsg as ChatMsg]);
+      setMessageText('');
+    },
+  });
+
+  const handleSend = useCallback(() => {
+    if (!messageText.trim() || !selectedConvId) return;
+    sendMutation.mutate({
+      conversationId: selectedConvId,
+      senderId: adminId,
+      senderName: adminName,
+      senderRole: 'admin',
+      content: messageText.trim(),
+    });
+  }, [messageText, selectedConvId, adminId, adminName]);
+
+  // ── Conversation courante ────────────────────────────────────────────────
+  const currentConv = conversations.find(c => c.conversationId === selectedConvId);
+  const filteredConvs = conversations.filter(c =>
+    c.chauffeurName.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // ── Grouper les messages par date ────────────────────────────────────────
+  const groupedMessages: { date: string; msgs: ChatMsg[] }[] = [];
+  messages.forEach(msg => {
+    const dateLabel = formatDate(msg.createdAt);
+    const last = groupedMessages[groupedMessages.length - 1];
+    if (last && last.date === dateLabel) {
+      last.msgs.push(msg);
+    } else {
+      groupedMessages.push({ date: dateLabel, msgs: [msg] });
+    }
+  });
 
   return (
     <DashboardLayout>
@@ -114,151 +187,186 @@ export default function Chat() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('chat.title')}</h1>
-          <p className="text-muted-foreground mt-2">{t('chat.description')}</p>
+          <p className="text-muted-foreground mt-2">Messagerie en temps réel avec les chauffeurs</p>
         </div>
 
         {/* Chat Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[600px]">
-          {/* Conversations List */}
-          <Card className="lg:col-span-1 flex flex-col">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t('chat.conversations')}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col gap-3 overflow-y-auto">
-              <div className="mb-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[640px]">
+
+          {/* ── Liste des conversations ── */}
+          <Card className="lg:col-span-1 flex flex-col overflow-hidden">
+            <CardHeader className="pb-3 shrink-0">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Conversations
+              </CardTitle>
+              <div className="relative mt-2">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={t('common.search')}
-                  className="h-9"
+                  placeholder="Rechercher un chauffeur..."
+                  className="pl-8 h-9"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
                 />
               </div>
-
-              {conversations.map((conversation) => (
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-2 space-y-1">
+              {filteredConvs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Aucun chauffeur disponible
+                </div>
+              ) : filteredConvs.map(conv => (
                 <button
-                  key={conversation.id}
-                  onClick={() => setSelectedConversation(conversation.id)}
-                  className={`p-3 rounded-lg border-2 transition-all text-left ${
-                    selectedConversation === conversation.id
+                  key={conv.conversationId}
+                  onClick={() => setSelectedConvId(conv.conversationId)}
+                  className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                    selectedConvId === conv.conversationId
                       ? 'border-blue-500 bg-blue-50'
-                      : 'border-transparent hover:border-gray-300'
+                      : 'border-transparent hover:border-gray-200 hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full" />
-                        {conversation.online && (
-                          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border border-white" />
-                        )}
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shrink-0">
+                        <User className="h-4 w-4 text-white" />
                       </div>
-                      <div>
-                        <p className="font-semibold text-sm">{conversation.participantName}</p>
-                        <p className="text-xs text-muted-foreground">{conversation.participantType}</p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{conv.chauffeurName}</p>
+                        <p className="text-xs text-muted-foreground">Chauffeur</p>
                       </div>
                     </div>
-                    {conversation.unreadCount > 0 && (
-                      <Badge variant="default" className="text-xs">
-                        {conversation.unreadCount}
-                      </Badge>
-                    )}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {conv.lastTime && (
+                        <span className="text-xs text-muted-foreground">{formatTime(conv.lastTime)}</span>
+                      )}
+                      {conv.unread > 0 && (
+                        <Badge className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                          {conv.unread}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {conversation.lastMessage}
-                  </p>
+                  {conv.lastMessage && (
+                    <p className="text-xs text-muted-foreground truncate mt-1">{conv.lastMessage}</p>
+                  )}
                 </button>
               ))}
             </CardContent>
           </Card>
 
-          {/* Chat Area */}
-          <Card className="lg:col-span-2 flex flex-col">
-            {currentConversation ? (
+          {/* ── Zone de chat ── */}
+          <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+            {currentConv ? (
               <>
-                {/* Chat Header */}
-                <CardHeader className="border-b pb-3">
+                {/* Header de la conversation */}
+                <CardHeader className="border-b pb-3 shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full" />
-                        {currentConversation.online && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border border-white" />
-                        )}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center">
+                        <User className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold">{currentConversation.participantName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {currentConversation.online ? t('chat.online') : t('chat.offline')}
-                        </p>
+                        <p className="font-semibold">{currentConv.chauffeurName}</p>
+                        <p className="text-xs text-muted-foreground">Chauffeur</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="icon" variant="ghost">
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost">
-                        <Video className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => refetchMessages()}
+                      title="Actualiser"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardHeader>
 
                 {/* Messages */}
                 <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.senderType === 'client' ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      <div
-                        className={`max-w-xs px-4 py-2 rounded-lg ${
-                          message.senderType === 'client'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200 text-gray-900'
-                        }`}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            message.senderType === 'client'
-                              ? 'text-blue-100'
-                              : 'text-gray-600'
-                          }`}
-                        >
-                          {message.timestamp}
-                        </p>
-                      </div>
+                  {loadingMessages ? (
+                    <div className="flex justify-center items-center h-full">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ))}
+                  ) : groupedMessages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                      <MessageSquare className="h-12 w-12 opacity-20" />
+                      <p className="text-sm">Aucun message. Commencez la conversation.</p>
+                    </div>
+                  ) : (
+                    groupedMessages.map(group => (
+                      <div key={group.date}>
+                        {/* Séparateur de date */}
+                        <div className="flex items-center gap-3 my-4">
+                          <div className="flex-1 h-px bg-border" />
+                          <span className="text-xs text-muted-foreground bg-background px-2">{group.date}</span>
+                          <div className="flex-1 h-px bg-border" />
+                        </div>
+                        {/* Bulles de messages */}
+                        {group.msgs.map(msg => {
+                          const isAdmin = msg.senderRole === 'admin';
+                          return (
+                            <div key={msg.id} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'} mb-2`}>
+                              {!isAdmin && (
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center mr-2 mt-1 shrink-0">
+                                  <User className="h-3.5 w-3.5 text-white" />
+                                </div>
+                              )}
+                              <div className={`max-w-sm ${isAdmin ? 'items-end' : 'items-start'} flex flex-col`}>
+                                {!isAdmin && (
+                                  <span className="text-xs text-muted-foreground mb-1">{msg.senderName}</span>
+                                )}
+                                <div className={`px-4 py-2.5 rounded-2xl ${
+                                  isAdmin
+                                    ? 'bg-blue-600 text-white rounded-br-sm'
+                                    : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+                                }`}>
+                                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                                </div>
+                                <span className={`text-xs mt-1 ${isAdmin ? 'text-right' : 'text-left'} text-muted-foreground`}>
+                                  {formatTime(msg.createdAt)}
+                                  {isAdmin && msg.isRead && <span className="ml-1 text-blue-400">Lu</span>}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
                 </CardContent>
 
-                {/* Message Input */}
-                <div className="border-t p-4">
+                {/* Saisie du message */}
+                <div className="border-t p-4 shrink-0">
                   <div className="flex gap-2">
                     <Input
-                      placeholder={t('chat.messagePlaceholder')}
+                      placeholder="Écrire un message..."
                       value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') handleSendMessage();
-                      }}
+                      onChange={e => setMessageText(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                      disabled={sendMutation.isPending}
+                      className="flex-1"
                     />
                     <Button
                       size="icon"
-                      onClick={handleSendMessage}
-                      disabled={!messageText.trim()}
+                      onClick={handleSend}
+                      disabled={!messageText.trim() || sendMutation.isPending}
                     >
-                      <Send className="h-4 w-4" />
+                      {sendMutation.isPending
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Send className="h-4 w-4" />
+                      }
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Appuyez sur Entrée pour envoyer — les messages sont actualisés toutes les 3 secondes
+                  </p>
                 </div>
               </>
             ) : (
-              <CardContent className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">{t('chat.selectConversation')}</p>
+              <CardContent className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                <MessageSquare className="h-12 w-12 opacity-20" />
+                <p>Sélectionnez une conversation</p>
               </CardContent>
             )}
           </Card>

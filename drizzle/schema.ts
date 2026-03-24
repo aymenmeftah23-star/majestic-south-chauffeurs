@@ -164,3 +164,38 @@ export const alerts = mysqlTable("alerts", {
 
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = typeof alerts.$inferInsert;
+// Reviews table — notation client après mission
+export const reviews = mysqlTable("reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  missionId: int("missionId").notNull(),
+  clientId: int("clientId").notNull(),
+  chauffeurId: int("chauffeurId"),
+  rating: int("rating").notNull(),           // 1 à 5
+  comment: text("comment"),
+  ratingPunctuality: int("ratingPunctuality"), // 1 à 5
+  ratingComfort: int("ratingComfort"),         // 1 à 5
+  ratingDriving: int("ratingDriving"),         // 1 à 5
+  ratingCleanliness: int("ratingCleanliness"), // 1 à 5
+  isPublic: boolean("isPublic").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = typeof reviews.$inferInsert;
+
+// Chat messages table — messages temps réel admin ↔ chauffeur
+export const chatMessages = mysqlTable("chat_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: varchar("conversationId", { length: 100 }).notNull(), // ex: "admin-chauffeur-12"
+  senderId: int("senderId").notNull(),
+  senderName: varchar("senderName", { length: 255 }).notNull(),
+  senderRole: varchar("senderRole", { length: 50 }).notNull(), // "admin" | "chauffeur"
+  content: text("content").notNull(),
+  missionId: int("missionId"),               // optionnel: lié à une mission
+  isRead: boolean("isRead").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, MapPin, User, Car, Clock, Euro, Loader2, Edit, Trash2 } from 'lucide-react';
+import ReviewForm from '@/components/ReviewForm';
+import ReviewsList from '@/components/ReviewsList';
 import { useLocation, useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
@@ -217,6 +219,19 @@ export default function MissionDetail() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Avis clients existants */}
+        <ReviewsList missionId={id} />
+
+        {/* Formulaire de notation (visible seulement pour les missions terminées) */}
+        {mission.status === 'terminee' && (
+          <ReviewForm
+            missionId={id}
+            clientId={mission.clientId}
+            chauffeurId={mission.chauffeurId ?? undefined}
+            onSuccess={() => refetch()}
+          />
         )}
       </div>
     </DashboardLayout>

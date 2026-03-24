@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, and, ne, count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, clients, chauffeurs, vehicles, demands, missions, quotes, alerts } from "../drizzle/schema";
+import { InsertUser, users, clients, chauffeurs, vehicles, demands, missions, quotes, alerts, reviews, chatMessages } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 // ============================================================
@@ -230,6 +230,38 @@ async function initDatabase(pool: mysql.Pool) {
         status VARCHAR(50) DEFAULT 'active',
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        missionId INT NOT NULL,
+        clientId INT NOT NULL,
+        chauffeurId INT,
+        rating INT NOT NULL,
+        comment TEXT,
+        ratingPunctuality INT,
+        ratingComfort INT,
+        ratingDriving INT,
+        ratingCleanliness INT,
+        isPublic TINYINT(1) DEFAULT 1,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        conversationId VARCHAR(100) NOT NULL,
+        senderId INT NOT NULL,
+        senderName VARCHAR(255) NOT NULL,
+        senderRole VARCHAR(50) NOT NULL,
+        content TEXT NOT NULL,
+        missionId INT,
+        isRead TINYINT(1) DEFAULT 0,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_conversation (conversationId),
+        INDEX idx_sender (senderId)
       )
     `);
     console.log('[Database] Tables initialized successfully');
@@ -552,4 +584,93 @@ export async function deleteAlert(id: number) {
   if (!db) throw new Error("Database not available");
   await db.delete(alerts).where(eq(alerts.id, id));
   return { success: true };
+}
+
+// ── REVIEWS ──────────────────────────────────────────────────
+export async function getAllReviews() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(reviews).orderBy(desc(reviews.createdAt));
+}
+
+export async function getReviewsByMission(missionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(reviews).where(eq(reviews.missionId, missionId));
+}
+
+export async function getReviewsByChauffeur(chauffeurId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(reviews).where(eq(reviews.chauffeurId, chauffeurId));
+}
+
+export async function createReview(data: {
+  missionId: number;
+  clientId: number;
+  chauffeurId?: number;
+  rating: number;
+  comment?: string;
+  ratingPunctuality?: number;
+  ratingComfort?: number;
+  ratingDriving?: number;
+  ratingCleanliness?: number;
+  isPublic?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(reviews).values(data);
+  return { id: (result[0] as any).insertId, ...data };
+}
+
+export async function deleteReview(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(reviews).where(eq(reviews.id, id));
+  return { success: true };
+}
+
+// ── CHAT MESSAGES ─────────────────────────────────────────────
+export async function getChatMessages(conversationId: string, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.conversationId, conversationId))
+    .orderBy(chatMessages.createdAt)
+    .limit(limit);
+}
+
+export async function createChatMessage(data: {
+  conversationId: string;
+  senderId: number;
+  senderName: string;
+  senderRole: string;
+  content: string;
+  missionId?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(chatMessages).values(data);
+  return { id: (result[0] as any).insertId, ...data, isRead: false, createdAt: new Date() };
+}
+
+export async function markChatMessagesRead(conversationId: string, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(chatMessages)
+    .set({ isRead: true })
+    .where(and(eq(chatMessages.conversationId, conversationId), ne(chatMessages.senderId, userId)));
+}
+
+export async function getUnreadChatCount(userId: number, senderRole: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db
+    .select({ count: count() })
+    .from(chatMessages)
+    .where(and(eq(chatMessages.isRead, false), ne(chatMessages.senderId, userId)));
+  return result[0]?.count ?? 0;
 }

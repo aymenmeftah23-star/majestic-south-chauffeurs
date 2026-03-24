@@ -15,6 +15,8 @@ import {
   getAllMissions, getMissionById, createMission, updateMission, deleteMission,
   getAllQuotes, getQuoteById, createQuote, updateQuote, deleteQuote,
   getAllAlerts, getAlertById, createAlert, updateAlert, deleteAlert,
+  getAllReviews, getReviewsByMission, getReviewsByChauffeur, createReview, deleteReview,
+  getChatMessages, createChatMessage, markChatMessagesRead,
 } from "./db";
 
 export const appRouter = router({
@@ -828,6 +830,89 @@ export const appRouter = router({
       }),
   }),
 
+  // ── REVIEWS ────────────────────────────────────────────────
+  reviews: router({
+    list: publicProcedure.query(async () => await getAllReviews()),
+    byMission: publicProcedure
+      .input(z.object({ missionId: z.number() }))
+      .query(async ({ input }) => await getReviewsByMission(input.missionId)),
+    byChauffeur: publicProcedure
+      .input(z.object({ chauffeurId: z.number() }))
+      .query(async ({ input }) => await getReviewsByChauffeur(input.chauffeurId)),
+    create: publicProcedure
+      .input(z.object({
+        missionId: z.number(),
+        clientId: z.number(),
+        chauffeurId: z.number().optional(),
+        rating: z.number().min(1).max(5),
+        comment: z.string().optional(),
+        ratingPunctuality: z.number().min(1).max(5).optional(),
+        ratingComfort: z.number().min(1).max(5).optional(),
+        ratingDriving: z.number().min(1).max(5).optional(),
+        ratingCleanliness: z.number().min(1).max(5).optional(),
+        isPublic: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const review = await createReview(input);
+        // Notifier l'admin de la nouvelle notation
+        try {
+          const { notificationService } = await import('./notification-service');
+          notificationService.broadcast({
+            type: 'new_review',
+            title: 'Nouvelle notation client',
+            message: `Note ${input.rating}/5 pour la mission #${input.missionId}`,
+            data: { missionId: input.missionId, rating: input.rating },
+          });
+        } catch {}
+        return review;
+      }),
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => await deleteReview(input.id)),
+  }),
+
+  // ── CHAT ─────────────────────────────────────────────────────
+  chat: router({
+    getMessages: publicProcedure
+      .input(z.object({
+        conversationId: z.string(),
+        limit: z.number().optional().default(50),
+      }))
+      .query(async ({ input }) => await getChatMessages(input.conversationId, input.limit)),
+    sendMessage: publicProcedure
+      .input(z.object({
+        conversationId: z.string(),
+        senderId: z.number(),
+        senderName: z.string(),
+        senderRole: z.string(),
+        content: z.string().min(1),
+        missionId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const msg = await createChatMessage(input);
+        // Diffuser le message via SSE
+        try {
+          const { notificationService } = await import('./notification-service');
+          notificationService.broadcast({
+            type: 'chat_message',
+            title: `Message de ${input.senderName}`,
+            message: input.content,
+            data: { conversationId: input.conversationId, senderId: input.senderId, msg },
+          });
+        } catch {}
+        return msg;
+      }),
+    markRead: publicProcedure
+      .input(z.object({
+        conversationId: z.string(),
+        userId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        await markChatMessagesRead(input.conversationId, input.userId);
+        return { success: true };
+      }),
+  }),
+
   payments: router({
     list: publicProcedure.query(async () => {
       const missions = await getAllMissions();
@@ -863,3 +948,4 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+

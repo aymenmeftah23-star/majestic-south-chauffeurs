@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import {
   MapPin, Clock, User, Phone, Car, CheckCircle, XCircle,
   Navigation, ChevronRight, LogOut, Calendar, AlertTriangle,
-  ArrowRight, Briefcase, Users
+  ArrowRight, Briefcase, Users, MessageSquare, Send, Loader2, RefreshCw
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -53,8 +53,38 @@ function isTomorrow(d: Date | string | null | undefined): boolean {
 
 export default function DriverPortal() {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "history">("today");
+  const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "history" | "chat">("today");
   const [selectedMission, setSelectedMission] = useState<any>(null);
+
+  // ── Chat ─────────────────────────────────────────────────────────────────
+  const driverId   = parseInt(localStorage.getItem("driver_user_id") || "0");
+  const convId     = `admin-chauffeur-${driverId}`;
+  const [chatText, setChatText] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: chatMsgs = [], refetch: refetchChat } = trpc.chat.getMessages.useQuery(
+    { conversationId: convId, limit: 100 },
+    { enabled: !!driverId && activeTab === "chat", refetchInterval: 3000 }
+  );
+
+  const sendChatMutation = trpc.chat.sendMessage.useMutation({
+    onSuccess: () => { setChatText(""); refetchChat(); },
+  });
+
+  const handleSendChat = () => {
+    if (!chatText.trim() || !driverId) return;
+    sendChatMutation.mutate({
+      conversationId: convId,
+      senderId: driverId,
+      senderName: driverName,
+      senderRole: "chauffeur",
+      content: chatText.trim(),
+    });
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMsgs]);
 
   // Informations du chauffeur connecté (depuis localStorage après login)
   const driverName = localStorage.getItem("driver_user_name") || "Chauffeur";
@@ -146,6 +176,7 @@ export default function DriverPortal() {
             { key: "today", label: "Aujourd'hui" },
             { key: "upcoming", label: "A venir" },
             { key: "history", label: "Historique" },
+            { key: "chat", label: "Messages" },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -161,14 +192,74 @@ export default function DriverPortal() {
           ))}
         </div>
 
+        {/* ── Onglet Chat ── */}
+        {activeTab === "chat" && (
+          <div className="flex flex-col h-[500px] bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {(chatMsgs as any[]).length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
+                  <MessageSquare className="h-10 w-10 opacity-20" />
+                  <p className="text-xs">Aucun message. Ecrivez a l'admin.</p>
+                </div>
+              ) : (
+                (chatMsgs as any[]).map((msg: any) => {
+                  const isMe = msg.senderRole === "chauffeur";
+                  return (
+                    <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-xs px-3 py-2 rounded-2xl text-sm ${
+                        isMe
+                          ? "text-[#1a1a2e] rounded-br-sm"
+                          : "bg-white/10 text-white rounded-bl-sm"
+                      }`}
+                        style={isMe ? { background: "linear-gradient(135deg, #C9A84C, #a07830)" } : {}}
+                      >
+                        <p className="leading-relaxed">{msg.content}</p>
+                        <p className={`text-xs mt-1 ${isMe ? "text-[#1a1a2e]/60" : "text-gray-500"}`}>
+                          {new Date(msg.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            {/* Saisie */}
+            <div className="border-t border-white/10 p-3 flex gap-2">
+              <input
+                type="text"
+                value={chatText}
+                onChange={e => setChatText(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleSendChat(); }}
+                placeholder="Ecrire a l'admin..."
+                className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                disabled={sendChatMutation.isPending}
+              />
+              <button
+                onClick={handleSendChat}
+                disabled={!chatText.trim() || sendChatMutation.isPending}
+                className="p-2.5 rounded-xl text-[#1a1a2e] disabled:opacity-40 transition-all"
+                style={{ background: "linear-gradient(135deg, #C9A84C, #a07830)" }}
+              >
+                {sendChatMutation.isPending
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Send className="h-4 w-4" />
+                }
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Liste des missions */}
-        {isLoading ? (
+        {activeTab !== "chat" && isLoading && (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
               <div key={i} className="bg-white/5 border border-white/10 rounded-xl h-28 animate-pulse" />
             ))}
           </div>
-        ) : displayedMissions.length === 0 ? (
+        )}
+        {activeTab !== "chat" && !isLoading && displayedMissions.length === 0 && (
           <div className="text-center py-16">
             <Calendar className="h-10 w-10 mx-auto mb-3 text-gray-600" />
             <p className="text-sm text-gray-400">
@@ -177,7 +268,8 @@ export default function DriverPortal() {
                : "Aucun historique"}
             </p>
           </div>
-        ) : (
+        )}
+        {activeTab !== "chat" && !isLoading && displayedMissions.length > 0 && (
           <div className="space-y-3">
             {displayedMissions.map((m: any) => {
               const sc = MISSION_STATUS[m.status] ?? MISSION_STATUS.a_confirmer;
