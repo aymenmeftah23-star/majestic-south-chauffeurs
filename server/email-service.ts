@@ -25,7 +25,15 @@ function createTransporter() {
     port,
     secure: port === 465,
     auth: { user, pass },
-    tls: { rejectUnauthorized: false },
+    tls: {
+      rejectUnauthorized: false,
+      servername: host,
+      minVersion: 'TLSv1.2',
+    },
+    // Timeout pour eviter les blocages
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
   });
 }
 

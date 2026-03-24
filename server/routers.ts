@@ -685,12 +685,11 @@ export const appRouter = router({
 
         // Notifier l'admin en temps réel
         try {
-          const { notificationService } = await import('./notification-service');
-          notificationService.broadcast({
-            type: 'mission_created',
+          const { notifyAdmins } = await import('./notification-service');
+          notifyAdmins({
+            type: 'info',
             title: 'Mission créée depuis devis',
             message: `La mission ${missionNumber} a été créée automatiquement depuis le devis accepté`,
-            data: { missionNumber },
           });
         } catch (notifErr) {
           console.error('[convertToMission] Notification error:', notifErr);
@@ -857,12 +856,11 @@ export const appRouter = router({
         const review = await createReview(input);
         // Notifier l'admin de la nouvelle notation
         try {
-          const { notificationService } = await import('./notification-service');
-          notificationService.broadcast({
-            type: 'new_review',
+          const { notifyAdmins } = await import('./notification-service');
+          notifyAdmins({
+            type: 'info',
             title: 'Nouvelle notation client',
             message: `Note ${input.rating}/5 pour la mission #${input.missionId}`,
-            data: { missionId: input.missionId, rating: input.rating },
           });
         } catch {}
         return review;
@@ -893,12 +891,11 @@ export const appRouter = router({
         const msg = await createChatMessage(input);
         // Diffuser le message via SSE
         try {
-          const { notificationService } = await import('./notification-service');
-          notificationService.broadcast({
-            type: 'chat_message',
+          const { notifyAdmins } = await import('./notification-service');
+          notifyAdmins({
+            type: 'info',
             title: `Message de ${input.senderName}`,
             message: input.content,
-            data: { conversationId: input.conversationId, senderId: input.senderId, msg },
           });
         } catch {}
         return msg;
