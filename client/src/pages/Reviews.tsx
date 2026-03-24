@@ -1,213 +1,210 @@
-import { useLanguage } from '@/contexts/LanguageContext';
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Star, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { trpc } from '@/lib/trpc';
+import { Star, Trash2, TrendingUp, Users, Award } from 'lucide-react';
+
+const GOLD = "#C9A84C";
+
+function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map(i => (
+        <Star
+          key={i}
+          size={size}
+          className={i <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Reviews() {
-  const { t } = useLanguage();
-  const [isLoading] = useState(false);
-  const [newReview, setNewReview] = useState('');
-  const [newRating, setNewRating] = useState(5);
+  const [filter, setFilter] = useState<'all' | '5' | '4' | '3' | '2' | '1'>('all');
 
-  // Mock reviews data
-  const reviews = [
-    {
-      id: 1,
-      missionId: 'M-2026-045',
-      chauffeur: 'Jean Dupont',
-      rating: 5,
-      comment: 'Excellent service! Très professionnel et ponctuel.',
-      date: '2026-03-23',
-      verified: true,
-    },
-    {
-      id: 2,
-      missionId: 'M-2026-044',
-      chauffeur: 'Marie Martin',
-      rating: 4,
-      comment: 'Bon service, véhicule confortable. Petit retard de 5 minutes.',
-      date: '2026-03-22',
-      verified: true,
-    },
-    {
-      id: 3,
-      missionId: 'M-2026-043',
-      chauffeur: 'Pierre Durand',
-      rating: 5,
-      comment: 'Parfait! Je recommande vivement Majestic South Chauffeurs.',
-      date: '2026-03-21',
-      verified: true,
-    },
-  ];
+  const { data: reviews = [], isLoading, refetch } = trpc.reviews.list.useQuery();
+  const { data: missions = [] } = trpc.missions.getAll.useQuery();
+  const { data: chauffeursList = [] } = trpc.chauffeurs.getAll.useQuery();
 
-  const averageRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-    : 0;
+  const deleteMutation = trpc.reviews.delete.useMutation({
+    onSuccess: () => refetch(),
+  });
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`h-4 w-4 ${
-              star <= rating
-                ? 'fill-yellow-400 text-yellow-400'
-                : 'text-muted-foreground'
-            }`}
-          />
-        ))}
-      </div>
-    );
+  const filtered = filter === 'all'
+    ? reviews
+    : reviews.filter((r: any) => r.rating === parseInt(filter));
+
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : '0.0';
+
+  const withPunctuality = reviews.filter((r: any) => r.ratingPunctuality);
+  const withComfort = reviews.filter((r: any) => r.ratingComfort);
+  const withDriving = reviews.filter((r: any) => r.ratingDriving);
+  const withCleanliness = reviews.filter((r: any) => r.ratingCleanliness);
+
+  const avgPunctuality = withPunctuality.length > 0
+    ? (withPunctuality.reduce((s: number, r: any) => s + r.ratingPunctuality, 0) / withPunctuality.length).toFixed(1) : '-';
+  const avgComfort = withComfort.length > 0
+    ? (withComfort.reduce((s: number, r: any) => s + r.ratingComfort, 0) / withComfort.length).toFixed(1) : '-';
+  const avgDriving = withDriving.length > 0
+    ? (withDriving.reduce((s: number, r: any) => s + r.ratingDriving, 0) / withDriving.length).toFixed(1) : '-';
+  const avgCleanliness = withCleanliness.length > 0
+    ? (withCleanliness.reduce((s: number, r: any) => s + r.ratingCleanliness, 0) / withCleanliness.length).toFixed(1) : '-';
+
+  const getMissionInfo = (missionId: number) => {
+    const m = missions.find((m: any) => m.id === missionId);
+    return m ? `${m.origin} - ${m.destination}` : `Mission #${missionId}`;
+  };
+
+  const getChauffeurName = (chauffeurId: number | null | undefined) => {
+    if (!chauffeurId) return 'Non assigne';
+    const c = chauffeursList.find((c: any) => c.id === chauffeurId);
+    return c?.name || `Chauffeur #${chauffeurId}`;
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('reviews.title')}</h1>
-          <p className="text-muted-foreground mt-2">{t('reviews.description')}</p>
+          <h1 className="text-2xl font-bold text-white">Avis Clients</h1>
+          <p className="text-gray-400 mt-1">Notations et retours des clients apres chaque mission</p>
         </div>
 
-        {/* Rating Summary */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-8">
+        {/* Statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Note moyenne</p>
+                  <p className="text-3xl font-bold text-white">{avgRating}</p>
+                  <StarRating rating={Math.round(parseFloat(avgRating))} />
+                </div>
+                <TrendingUp size={32} style={{ color: GOLD }} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Total avis</p>
+                  <p className="text-3xl font-bold text-white">{reviews.length}</p>
+                </div>
+                <Users size={32} style={{ color: GOLD }} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">5 etoiles</p>
+                  <p className="text-3xl font-bold text-white">
+                    {reviews.filter((r: any) => r.rating === 5).length}
+                  </p>
+                </div>
+                <Award size={32} style={{ color: GOLD }} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-2">{t('reviews.averageRating')}</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">{averageRating}</span>
-                  <span className="text-muted-foreground">/5</span>
+                <p className="text-gray-400 text-sm mb-2">Criteres detailles</p>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-400">Ponctualite</span><span className="text-white">{avgPunctuality}/5</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Confort</span><span className="text-white">{avgComfort}/5</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Conduite</span><span className="text-white">{avgDriving}/5</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Proprete</span><span className="text-white">{avgCleanliness}/5</span></div>
                 </div>
-                <div className="mt-2">{renderStars(Math.round(parseFloat(averageRating as string)))}</div>
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              <div className="flex-1">
-                <div className="space-y-2">
-                  {[5, 4, 3, 2, 1].map((rating) => {
-                    const count = reviews.filter((r) => r.rating === rating).length;
-                    const percentage = (count / reviews.length) * 100;
-                    return (
-                      <div key={rating} className="flex items-center gap-2">
-                        <span className="text-sm w-8">{rating}/5</span>
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-yellow-400"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                        <span className="text-sm text-muted-foreground w-8 text-right">
-                          {count}
-                        </span>
+        {/* Filtres */}
+        <div className="flex gap-2 flex-wrap">
+          {(['all', '5', '4', '3', '2', '1'] as const).map(f => (
+            <Button
+              key={f}
+              variant={filter === f ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter(f)}
+              className={filter === f ? 'text-black' : 'border-gray-700 text-gray-300'}
+              style={filter === f ? { backgroundColor: GOLD } : {}}
+            >
+              {f === 'all' ? 'Tous' : `${f} etoiles`}
+            </Button>
+          ))}
+        </div>
+
+        {/* Liste des avis */}
+        {isLoading ? (
+          <div className="text-center py-12 text-gray-400">Chargement des avis...</div>
+        ) : filtered.length === 0 ? (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-12 text-center">
+              <Star size={48} className="mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400 text-lg">Aucun avis pour le moment</p>
+              <p className="text-gray-500 text-sm mt-2">Les avis apparaitront ici apres les missions terminees</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map((review: any) => (
+              <Card key={review.id} className="bg-gray-900 border-gray-800">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <StarRating rating={review.rating} size={18} />
+                        <Badge variant="outline" className="border-gray-700 text-gray-300">
+                          {review.rating}/5
+                        </Badge>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Write Review */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              {t('reviews.writeReview')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">{t('reviews.rating')}</label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => setNewRating(star)}
-                    className="focus:outline-none"
-                  >
-                    <Star
-                      className={`h-6 w-6 cursor-pointer transition-colors ${
-                        star <= newRating
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-muted-foreground hover:text-yellow-300'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">{t('reviews.comment')}</label>
-              <Textarea
-                placeholder={t('reviews.commentPlaceholder')}
-                value={newReview}
-                onChange={(e) => setNewReview(e.target.value)}
-                rows={4}
-              />
-            </div>
-
-            <Button>{t('reviews.submit')}</Button>
-          </CardContent>
-        </Card>
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Reviews List */}
-        {!isLoading && reviews.length > 0 && (
-          <div className="space-y-3">
-            {reviews.map((review) => (
-              <Card key={review.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold">{review.chauffeur}</h3>
-                          {review.verified && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                              {t('reviews.verified')}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {t('reviews.mission')}: {review.missionId}
+                      <p className="text-white font-medium mb-1">{getMissionInfo(review.missionId)}</p>
+                      <p className="text-gray-400 text-sm mb-2">
+                        Chauffeur : {getChauffeurName(review.chauffeurId)}
+                      </p>
+                      {review.comment && (
+                        <p className="text-gray-300 text-sm italic border-l-2 pl-3 mt-2" style={{ borderColor: GOLD }}>
+                          "{review.comment}"
                         </p>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(review.date).toLocaleDateString('fr-FR')}
-                      </span>
+                      )}
+                      {(review.ratingPunctuality || review.ratingComfort || review.ratingDriving || review.ratingCleanliness) && (
+                        <div className="flex gap-4 mt-3 text-xs text-gray-500">
+                          {review.ratingPunctuality && <span>Ponctualite: {review.ratingPunctuality}/5</span>}
+                          {review.ratingComfort && <span>Confort: {review.ratingComfort}/5</span>}
+                          {review.ratingDriving && <span>Conduite: {review.ratingDriving}/5</span>}
+                          {review.ratingCleanliness && <span>Proprete: {review.ratingCleanliness}/5</span>}
+                        </div>
+                      )}
+                      <p className="text-gray-600 text-xs mt-2">
+                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
+                      </p>
                     </div>
-
-                    <div>{renderStars(review.rating)}</div>
-
-                    <p className="text-sm">{review.comment}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-400 hover:text-red-300"
+                      onClick={() => {
+                        if (confirm('Supprimer cet avis ?')) {
+                          deleteMutation.mutate({ id: review.id });
+                        }
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && reviews.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Star className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">{t('common.noData')}</h3>
-              <p className="text-muted-foreground mt-2">{t('reviews.noReviews')}</p>
-            </CardContent>
-          </Card>
         )}
       </div>
     </DashboardLayout>

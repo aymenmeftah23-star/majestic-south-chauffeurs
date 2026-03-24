@@ -19,10 +19,11 @@ const navGroups = [
     items: [
       { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
       { path: "/planning", label: "Planning", icon: Calendar },
+      { path: "/gps-tracking", label: "Suivi GPS", icon: MapPin },
     ]
   },
   {
-    label: "Opérations",
+    label: "Operations",
     items: [
       { path: "/missions", label: "Missions", icon: MapPin },
       { path: "/demands", label: "Demandes", icon: ClipboardList },
@@ -33,7 +34,7 @@ const navGroups = [
     label: "Ressources",
     items: [
       { path: "/chauffeurs", label: "Chauffeurs", icon: UserCheck },
-      { path: "/vehicles", label: "Véhicules", icon: Car },
+      { path: "/vehicles", label: "Vehicules", icon: Car },
       { path: "/clients", label: "Clients", icon: Users },
     ]
   },
@@ -43,15 +44,27 @@ const navGroups = [
       { path: "/invoices", label: "Facturation", icon: CreditCard },
       { path: "/payments", label: "Paiements", icon: CreditCard },
       { path: "/reporting", label: "Statistiques", icon: BarChart3 },
+      { path: "/bonuses", label: "Primes", icon: Gift },
+      { path: "/promo-codes", label: "Codes promo", icon: Tag },
     ]
   },
   {
-    label: "Système",
+    label: "Communication",
+    items: [
+      { path: "/chat", label: "Messagerie", icon: MessageSquare },
+      { path: "/reviews", label: "Avis clients", icon: Star },
+      { path: "/support", label: "Support", icon: Shield },
+    ]
+  },
+  {
+    label: "Systeme",
     items: [
       { path: "/alerts", label: "Alertes", icon: Bell },
       { path: "/members", label: "Membres", icon: UserCog },
       { path: "/history", label: "Historique", icon: History },
-      { path: "/settings", label: "Paramètres", icon: Settings },
+      { path: "/audit-trail", label: "Journal d'audit", icon: Shield },
+      { path: "/webhooks", label: "Webhooks", icon: Webhook },
+      { path: "/settings", label: "Parametres", icon: Settings },
     ]
   }
 ];

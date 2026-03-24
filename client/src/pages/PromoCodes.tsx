@@ -1,204 +1,224 @@
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Percent, Copy, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Tag, Plus, Trash2, Copy, Check } from 'lucide-react';
+
+const GOLD = "#C9A84C";
+
+interface PromoCode {
+  id: string;
+  code: string;
+  discount: number;
+  type: 'percent' | 'fixed';
+  maxUses: number;
+  usedCount: number;
+  validUntil: string;
+  active: boolean;
+}
 
 export default function PromoCodes() {
-  const { t } = useLanguage();
-  const [isLoading] = useState(false);
-  const [copied, setCopied] = useState<number | null>(null);
+  const [codes, setCodes] = useState<PromoCode[]>([
+    { id: '1', code: 'BIENVENUE10', discount: 10, type: 'percent', maxUses: 100, usedCount: 0, validUntil: '2026-12-31', active: true },
+    { id: '2', code: 'VIP20', discount: 20, type: 'percent', maxUses: 50, usedCount: 0, validUntil: '2026-06-30', active: true },
+    { id: '3', code: 'NOEL50', discount: 50, type: 'fixed', maxUses: 30, usedCount: 0, validUntil: '2026-12-25', active: false },
+  ]);
 
-  // Mock promo codes data
-  const promoCodes = [
-    {
-      id: 1,
-      code: 'WELCOME20',
-      discount: 20,
-      type: 'percentage',
-      description: 'Bienvenue - 20% de réduction',
-      usageLimit: 100,
-      usageCount: 45,
-      expiryDate: '2026-06-30',
-      active: true,
-      applicableTo: 'all',
-    },
-    {
-      id: 2,
-      code: 'SUMMER15',
-      discount: 15,
-      type: 'percentage',
-      description: 'Offre été - 15% de réduction',
-      usageLimit: 200,
-      usageCount: 128,
-      expiryDate: '2026-08-31',
-      active: true,
-      applicableTo: 'missions',
-    },
-    {
-      id: 3,
-      code: 'FIXED10',
-      discount: 1000,
-      type: 'fixed',
-      description: 'Réduction fixe - 10€',
-      usageLimit: 50,
-      usageCount: 50,
-      expiryDate: '2026-04-30',
-      active: false,
-      applicableTo: 'all',
-    },
-    {
-      id: 4,
-      code: 'CORPORATE25',
-      discount: 25,
-      type: 'percentage',
-      description: 'Tarif corporate - 25% de réduction',
-      usageLimit: null,
-      usageCount: 312,
-      expiryDate: '2026-12-31',
-      active: true,
-      applicableTo: 'corporate',
-    },
-  ];
+  const [showForm, setShowForm] = useState(false);
+  const [newCode, setNewCode] = useState({ code: '', discount: '', type: 'percent' as 'percent' | 'fixed', maxUses: '', validUntil: '' });
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const copyToClipboard = (code: string, id: number) => {
-    navigator.clipboard.writeText(code);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
+  const handleAdd = () => {
+    if (!newCode.code || !newCode.discount) return;
+    const promo: PromoCode = {
+      id: Date.now().toString(),
+      code: newCode.code.toUpperCase(),
+      discount: parseInt(newCode.discount),
+      type: newCode.type,
+      maxUses: parseInt(newCode.maxUses) || 999,
+      usedCount: 0,
+      validUntil: newCode.validUntil || '2026-12-31',
+      active: true,
+    };
+    setCodes([promo, ...codes]);
+    setNewCode({ code: '', discount: '', type: 'percent', maxUses: '', validUntil: '' });
+    setShowForm(false);
   };
 
-  const getUsagePercentage = (code: any) => {
-    if (!code.usageLimit) return 0;
-    return (code.usageCount / code.usageLimit) * 100;
+  const handleDelete = (id: string) => {
+    setCodes(codes.filter(c => c.id !== id));
+  };
+
+  const handleToggle = (id: string) => {
+    setCodes(codes.map(c => c.id === id ? { ...c, active: !c.active } : c));
+  };
+
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopied(code);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t('promoCodes.title')}</h1>
-            <p className="text-muted-foreground mt-2">{t('promoCodes.description')}</p>
+            <h1 className="text-2xl font-bold text-white">Codes Promotionnels</h1>
+            <p className="text-gray-400 mt-1">Gerez vos codes de reduction pour les clients</p>
           </div>
-          <Button size="lg" className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('promoCodes.new')}
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            style={{ backgroundColor: GOLD }}
+            className="text-black"
+          >
+            <Plus size={16} className="mr-2" /> Nouveau code
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">{t('promoCodes.active')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {promoCodes.filter((c) => c.active).length}
-              </div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-white">{codes.length}</p>
+              <p className="text-gray-400 text-sm">Total codes</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">{t('promoCodes.totalUsage')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {promoCodes.reduce((sum, c) => sum + c.usageCount, 0)}
-              </div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-green-400">{codes.filter(c => c.active).length}</p>
+              <p className="text-gray-400 text-sm">Codes actifs</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">{t('promoCodes.totalSavings')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">€2,450</div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-white">{codes.reduce((s, c) => s + c.usedCount, 0)}</p>
+              <p className="text-gray-400 text-sm">Utilisations totales</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+        {showForm && (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 space-y-4">
+              <p className="text-white font-medium">Creer un nouveau code</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 block mb-1">Code</label>
+                  <Input
+                    value={newCode.code}
+                    onChange={e => setNewCode(p => ({ ...p, code: e.target.value }))}
+                    className="bg-gray-800 border-gray-700 text-white uppercase"
+                    placeholder="Ex: PROMO20"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 block mb-1">Reduction</label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      value={newCode.discount}
+                      onChange={e => setNewCode(p => ({ ...p, discount: e.target.value }))}
+                      className="bg-gray-800 border-gray-700 text-white"
+                      placeholder="10"
+                    />
+                    <select
+                      value={newCode.type}
+                      onChange={e => setNewCode(p => ({ ...p, type: e.target.value as 'percent' | 'fixed' }))}
+                      className="bg-gray-800 border border-gray-700 text-white rounded px-3"
+                    >
+                      <option value="percent">%</option>
+                      <option value="fixed">EUR</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 block mb-1">Utilisations max</label>
+                  <Input
+                    type="number"
+                    value={newCode.maxUses}
+                    onChange={e => setNewCode(p => ({ ...p, maxUses: e.target.value }))}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    placeholder="100"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 block mb-1">Valide jusqu'au</label>
+                  <Input
+                    type="date"
+                    value={newCode.validUntil}
+                    onChange={e => setNewCode(p => ({ ...p, validUntil: e.target.value }))}
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleAdd} style={{ backgroundColor: GOLD }} className="text-black">Creer</Button>
+                <Button onClick={() => setShowForm(false)} variant="outline" className="border-gray-700 text-gray-300">Annuler</Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Promo Codes List */}
-        {!isLoading && promoCodes.length > 0 && (
+        {codes.length === 0 ? (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-12 text-center">
+              <Tag size={48} className="mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400 text-lg">Aucun code promotionnel</p>
+              <p className="text-gray-500 text-sm mt-2">Creez votre premier code de reduction</p>
+            </CardContent>
+          </Card>
+        ) : (
           <div className="space-y-3">
-            {promoCodes.map((promoCode) => (
-              <Card key={promoCode.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-bold font-mono">{promoCode.code}</h3>
-                          <Badge variant={promoCode.active ? 'default' : 'secondary'}>
-                            {promoCode.active ? t('common.active') : t('common.inactive')}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {promoCode.description}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Percent className="h-4 w-4" />
-                            <span>
-                              {promoCode.type === 'percentage'
-                                ? `${promoCode.discount}%`
-                                : `€${(promoCode.discount / 100).toFixed(2)}`}
-                            </span>
-                          </div>
-                          <span className="text-muted-foreground">
-                            {t('promoCodes.expiry')}: {new Date(promoCode.expiryDate).toLocaleDateString('fr-FR')}
-                          </span>
-                        </div>
+            {codes.map(code => (
+              <Card key={code.id} className="bg-gray-900 border-gray-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gray-800 rounded px-3 py-2 font-mono text-lg text-white tracking-wider">
+                        {code.code}
                       </div>
-
+                      <button onClick={() => handleCopy(code.code)} className="text-gray-500 hover:text-white">
+                        {copied === code.code ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                      </button>
+                      <Badge
+                        variant="outline"
+                        className={code.active ? 'border-green-600 text-green-400' : 'border-gray-700 text-gray-500'}
+                      >
+                        {code.active ? 'Actif' : 'Inactif'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <p className="text-white font-bold text-lg" style={{ color: GOLD }}>
+                          -{code.discount}{code.type === 'percent' ? '%' : ' EUR'}
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          {code.usedCount}/{code.maxUses} utilisations
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-gray-400 text-sm">Expire le</p>
+                        <p className="text-white text-sm">{new Date(code.validUntil).toLocaleDateString('fr-FR')}</p>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="gap-2"
-                          onClick={() => copyToClipboard(promoCode.code, promoCode.id)}
+                          className="border-gray-700 text-gray-300"
+                          onClick={() => handleToggle(code.id)}
                         >
-                          <Copy className="h-4 w-4" />
-                          {copied === promoCode.id ? t('promoCodes.copied') : t('common.copy')}
+                          {code.active ? 'Desactiver' : 'Activer'}
                         </Button>
-                        <Button size="sm" variant="ghost">
-                          {t('common.edit')}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-400 hover:text-red-300"
+                          onClick={() => handleDelete(code.id)}
+                        >
+                          <Trash2 size={16} />
                         </Button>
-                        <Button size="sm" variant="ghost" className="text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Usage Bar */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">{t('promoCodes.usage')}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {promoCode.usageCount}
-                          {promoCode.usageLimit ? ` / ${promoCode.usageLimit}` : '+'}
-                        </span>
-                      </div>
-                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 transition-all"
-                          style={{
-                            width: `${Math.min(getUsagePercentage(promoCode), 100)}%`,
-                          }}
-                        />
                       </div>
                     </div>
                   </div>
@@ -206,17 +226,6 @@ export default function PromoCodes() {
               </Card>
             ))}
           </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && promoCodes.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Percent className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">{t('common.noData')}</h3>
-              <p className="text-muted-foreground mt-2">{t('promoCodes.noPromoCodes')}</p>
-            </CardContent>
-          </Card>
         )}
       </div>
     </DashboardLayout>

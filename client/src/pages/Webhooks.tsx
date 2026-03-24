@@ -1,202 +1,162 @@
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Copy, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { Webhook, Plus, Trash2, Copy, Check } from 'lucide-react';
+
+const GOLD = "#C9A84C";
+
+interface WebhookConfig {
+  id: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  secret: string;
+  lastTriggered: Date | null;
+  failCount: number;
+}
+
+const AVAILABLE_EVENTS = [
+  'mission.created', 'mission.updated', 'mission.completed',
+  'demand.created', 'demand.confirmed',
+  'payment.received', 'payment.refunded',
+  'quote.accepted', 'chauffeur.assigned', 'client.created',
+];
 
 export default function Webhooks() {
-  const { t } = useLanguage();
-  const [isLoading] = useState(false);
-  const [copied, setCopied] = useState<number | null>(null);
+  const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [newWebhook, setNewWebhook] = useState({ url: '', events: [] as string[] });
+  const [copied, setCopied] = useState<string | null>(null);
 
-  // Mock webhooks data
-  const webhooks = [
-    {
-      id: 1,
-      name: 'Slack Notifications',
-      url: 'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX',
-      events: ['mission.created', 'mission.completed', 'payment.received'],
-      active: true,
-      lastTriggered: '2026-03-23 14:35:22',
-      status: 'success',
-    },
-    {
-      id: 2,
-      name: 'Zapier Integration',
-      url: 'https://hooks.zapier.com/hooks/catch/12345678/abcdefg/',
-      events: ['demand.created', 'mission.created'],
-      active: true,
-      lastTriggered: '2026-03-23 14:30:15',
-      status: 'success',
-    },
-    {
-      id: 3,
-      name: 'Discord Alerts',
-      url: 'https://discordapp.com/api/webhooks/123456789/abcdefghijklmnopqrst',
-      events: ['alert.critical', 'payment.failed'],
-      active: false,
-      lastTriggered: '2026-03-22 10:15:00',
-      status: 'failed',
-    },
-  ];
-
-  const eventTypes = [
-    'demand.created',
-    'demand.updated',
-    'mission.created',
-    'mission.completed',
-    'mission.cancelled',
-    'payment.received',
-    'payment.failed',
-    'alert.critical',
-    'chauffeur.assigned',
-    'review.submitted',
-  ];
-
-  const copyToClipboard = (url: string, id: number) => {
-    navigator.clipboard.writeText(url);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
+  const generateSecret = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = 'whsec_';
+    for (let i = 0; i < 32; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    return result;
   };
+
+  const handleAdd = () => {
+    if (!newWebhook.url || newWebhook.events.length === 0) return;
+    const wh: WebhookConfig = {
+      id: Date.now().toString(), url: newWebhook.url, events: newWebhook.events,
+      active: true, secret: generateSecret(), lastTriggered: null, failCount: 0,
+    };
+    setWebhooks([wh, ...webhooks]);
+    setNewWebhook({ url: '', events: [] });
+    setShowForm(false);
+  };
+
+  const handleDelete = (id: string) => setWebhooks(webhooks.filter(w => w.id !== id));
+  const handleToggle = (id: string) => setWebhooks(webhooks.map(w => w.id === id ? { ...w, active: !w.active } : w));
+  const handleCopy = (text: string) => { navigator.clipboard.writeText(text); setCopied(text); setTimeout(() => setCopied(null), 2000); };
+  const toggleEvent = (event: string) => setNewWebhook(p => ({ ...p, events: p.events.includes(event) ? p.events.filter(e => e !== event) : [...p.events, event] }));
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t('webhooks.title')}</h1>
-            <p className="text-muted-foreground mt-2">{t('webhooks.description')}</p>
+            <h1 className="text-2xl font-bold text-white">Webhooks</h1>
+            <p className="text-gray-400 mt-1">Configurez des webhooks pour recevoir des notifications en temps reel</p>
           </div>
-          <Button size="lg" className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('webhooks.new')}
+          <Button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: GOLD }} className="text-black">
+            <Plus size={16} className="mr-2" /> Nouveau webhook
           </Button>
         </div>
 
-        {/* Documentation */}
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-base">{t('webhooks.documentation')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              {t('webhooks.docDesc')}
-            </p>
-            <div className="bg-white p-3 rounded font-mono text-xs overflow-x-auto">
-              POST /webhooks/events
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-white">{webhooks.length}</p>
+              <p className="text-gray-400 text-sm">Total webhooks</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-green-400">{webhooks.filter(w => w.active).length}</p>
+              <p className="text-gray-400 text-sm">Actifs</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-red-400">{webhooks.filter(w => w.failCount > 0).length}</p>
+              <p className="text-gray-400 text-sm">En erreur</p>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Event Types */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('webhooks.availableEvents')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {eventTypes.map((event) => (
-                <Badge key={event} variant="outline">
-                  {event}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+        {showForm && (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 space-y-4">
+              <p className="text-white font-medium">Configurer un webhook</p>
+              <div>
+                <label className="text-sm text-gray-400 block mb-1">URL de destination</label>
+                <Input value={newWebhook.url} onChange={e => setNewWebhook(p => ({ ...p, url: e.target.value }))} className="bg-gray-800 border-gray-700 text-white" placeholder="https://votre-serveur.com/webhook" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 block mb-2">Evenements</label>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_EVENTS.map(event => (
+                    <button key={event} onClick={() => toggleEvent(event)} className={`px-3 py-1 rounded text-sm border transition-all ${newWebhook.events.includes(event) ? 'border-amber-500 text-amber-400 bg-amber-500/10' : 'border-gray-700 text-gray-400 hover:border-gray-600'}`}>
+                      {event}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleAdd} style={{ backgroundColor: GOLD }} className="text-black">Creer</Button>
+                <Button onClick={() => setShowForm(false)} variant="outline" className="border-gray-700 text-gray-300">Annuler</Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Webhooks List */}
-        {!isLoading && webhooks.length > 0 && (
-          <div className="space-y-3">
-            {webhooks.map((webhook) => (
-              <Card key={webhook.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold">{webhook.name}</h3>
-                          <Badge variant={webhook.active ? 'default' : 'secondary'}>
-                            {webhook.active ? t('common.active') : t('common.inactive')}
-                          </Badge>
-                          {webhook.status === 'success' ? (
-                            <Badge className="bg-green-100 text-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              OK
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-red-100 text-red-800">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Error
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Input
-                            value={webhook.url}
-                            readOnly
-                            className="font-mono text-xs flex-1"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(webhook.url, webhook.id)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {t('webhooks.lastTriggered')}: {webhook.lastTriggered}
-                        </p>
+        {webhooks.length === 0 ? (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-12 text-center">
+              <Webhook size={48} className="mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400 text-lg">Aucun webhook configure</p>
+              <p className="text-gray-500 text-sm mt-2">Les webhooks permettent d'integrer Majestic South avec vos outils externes</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {webhooks.map(wh => (
+              <Card key={wh.id} className="bg-gray-900 border-gray-800">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className={wh.active ? 'border-green-600 text-green-400' : 'border-gray-700 text-gray-500'}>{wh.active ? 'Actif' : 'Inactif'}</Badge>
+                        {wh.failCount > 0 && <Badge variant="outline" className="border-red-600 text-red-400">{wh.failCount} erreurs</Badge>}
                       </div>
-
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="ghost">
-                          {t('common.edit')}
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <p className="text-white font-mono text-sm">{wh.url}</p>
                     </div>
-
-                    {/* Events */}
-                    <div>
-                      <p className="text-sm font-medium mb-2">{t('webhooks.events')}:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {webhook.events.map((event) => (
-                          <Badge key={event} variant="outline" className="text-xs">
-                            {event}
-                          </Badge>
-                        ))}
-                      </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="border-gray-700 text-gray-300" onClick={() => handleToggle(wh.id)}>{wh.active ? 'Desactiver' : 'Activer'}</Button>
+                      <Button size="sm" variant="ghost" className="text-red-400" onClick={() => handleDelete(wh.id)}><Trash2 size={16} /></Button>
                     </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {wh.events.map(e => (<span key={e} className="px-2 py-0.5 bg-gray-800 text-gray-400 rounded text-xs">{e}</span>))}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <span>Secret:</span>
+                      <code className="bg-gray-800 px-2 py-0.5 rounded">{wh.secret.substring(0, 12)}...</code>
+                      <button onClick={() => handleCopy(wh.secret)} className="hover:text-white">
+                        {copied === wh.secret ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                    <span>{wh.lastTriggered ? `Dernier appel: ${wh.lastTriggered.toLocaleString('fr-FR')}` : 'Jamais declenche'}</span>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && webhooks.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">{t('common.noData')}</h3>
-              <p className="text-muted-foreground mt-2">{t('webhooks.noWebhooks')}</p>
-            </CardContent>
-          </Card>
         )}
       </div>
     </DashboardLayout>

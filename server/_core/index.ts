@@ -12,6 +12,7 @@ import { startCronService } from "../cron-service";
 import { createCheckoutSession, constructWebhookEvent, isStripeEnabled } from "../stripe-service";
 import { generateICalContent } from "../ical-service";
 import { ENV } from "./env";
+import { createUser, loginUser } from "../auth-local";
 import { DEMO_MISSIONS, DEMO_CLIENTS, DEMO_CHAUFFEURS, DEMO_VEHICLES, DEMO_QUOTES } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -52,6 +53,41 @@ async function startServer() {
   // Healthcheck pour Railway
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", service: "Majestic South Chauffeurs", timestamp: new Date().toISOString() });
+  });
+
+  // Route d'inscription client
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { firstName, lastName, email, phone, company, password, role } = req.body;
+      if (!email || !password || !firstName || !lastName) {
+        return res.status(400).json({ message: "Champs obligatoires manquants" });
+      }
+      const name = `${firstName} ${lastName}`;
+      const user = await createUser({ email, password, name, phone, role: role || "client" });
+      try {
+        const { getDb } = await import("../db");
+        const db = getDb();
+        if (db) {
+          const { clients } = await import("../../drizzle/schema");
+          await db.insert(clients).values({
+            firstName, lastName, email, phone: phone || "", company: company || "",
+            type: "particulier", status: "actif",
+          });
+        }
+      } catch (dbErr) { console.log("[Register] Client cree en memoire (DB non disponible)"); }
+      res.json({ success: true, user });
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  // Route de login client
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) return res.status(400).json({ message: "Email et mot de passe requis" });
+      const result = await loginUser(email, password);
+      if (!result) return res.status(401).json({ message: "Email ou mot de passe incorrect" });
+      res.json({ success: true, user: result.user, token: result.token });
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   // Real-time notifications SSE

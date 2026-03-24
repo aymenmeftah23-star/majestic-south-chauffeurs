@@ -1,220 +1,246 @@
-import { useState } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Search, CheckCircle2, AlertTriangle, Info, XCircle, Plus, Filter } from 'lucide-react';
+import { Bell, Search, CheckCircle, AlertTriangle, Info, XCircle, Clock } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
+const GOLD = "#C9A84C";
+
+interface Alert {
+  id: string;
+  title: string;
+  message: string;
+  priority: 'critique' | 'haute' | 'normale' | 'basse';
+  status: 'active' | 'lue' | 'resolue';
+  createdAt: Date;
+  type: string;
+}
+
 export default function Alerts() {
-  const { t } = useLanguage();
+  const { data: missions = [] } = trpc.missions.getAll.useQuery();
+  const { data: chauffeurs = [] } = trpc.chauffeurs.getAll.useQuery();
+  const { data: demands = [] } = trpc.demands.getAll.useQuery();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
-  const { data: alerts = [], isLoading, refetch } = trpc.alerts.list.useQuery();
+  // Generer des alertes reelles basees sur les donnees
+  const alerts = useMemo(() => {
+    const result: Alert[] = [];
 
-  const updateMutation = trpc.alerts.update.useMutation({
-    onSuccess: () => refetch(),
+    // Alertes pour les missions sans chauffeur assigne
+    missions.filter((m: any) => !m.chauffeurId && m.status !== 'cancelled').forEach((m: any) => {
+      result.push({
+        id: `no-driver-${m.id}`,
+        title: 'Mission sans chauffeur',
+        message: `La mission ${m.number || `M-${m.id}`} n'a pas de chauffeur assigne.`,
+        priority: 'haute',
+        status: 'active',
+        createdAt: new Date(m.createdAt || Date.now()),
+        type: 'mission',
+      });
+    });
+
+    // Alertes pour les missions aujourd'hui
+    const today = new Date();
+    missions.filter((m: any) => {
+      const d = new Date(m.date);
+      return d.toDateString() === today.toDateString() && m.status === 'confirmed';
+    }).forEach((m: any) => {
+      result.push({
+        id: `today-${m.id}`,
+        title: 'Mission aujourd\'hui',
+        message: `Mission ${m.number || `M-${m.id}`} prevue aujourd'hui.`,
+        priority: 'normale',
+        status: 'active',
+        createdAt: new Date(m.date),
+        type: 'rappel',
+      });
+    });
+
+    // Alertes pour les nouvelles demandes en attente
+    demands.filter((d: any) => d.status === 'pending' || d.status === 'new').forEach((d: any) => {
+      result.push({
+        id: `demand-${d.id}`,
+        title: 'Nouvelle demande en attente',
+        message: `Demande de ${d.clientName || 'client'} en attente de traitement.`,
+        priority: 'haute',
+        status: 'active',
+        createdAt: new Date(d.createdAt || Date.now()),
+        type: 'demande',
+      });
+    });
+
+    // Alertes pour les missions en retard
+    missions.filter((m: any) => {
+      const d = new Date(m.date);
+      return d < today && m.status !== 'completed' && m.status !== 'cancelled';
+    }).forEach((m: any) => {
+      result.push({
+        id: `late-${m.id}`,
+        title: 'Mission en retard',
+        message: `La mission ${m.number || `M-${m.id}`} est en retard (prevue le ${new Date(m.date).toLocaleDateString('fr-FR')}).`,
+        priority: 'critique',
+        status: 'active',
+        createdAt: new Date(m.date),
+        type: 'retard',
+      });
+    });
+
+    return result.sort((a, b) => {
+      const priorityOrder = { critique: 0, haute: 1, normale: 2, basse: 3 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+  }, [missions, chauffeurs, demands]);
+
+  const visibleAlerts = alerts.filter(a => !dismissedIds.includes(a.id));
+
+  const filteredAlerts = visibleAlerts.filter(alert => {
+    const matchSearch = !searchQuery ||
+      alert.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      alert.message.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchPriority = filterPriority === 'all' || alert.priority === filterPriority;
+    return matchSearch && matchPriority;
   });
 
-  const deleteMutation = trpc.alerts.delete.useMutation({
-    onSuccess: () => refetch(),
-  });
-
-  const priorities = [
-    { value: 'all', label: t('common.all') },
-    { value: 'critique', label: t('alerts.priority.critique') },
-    { value: 'haute', label: t('alerts.priority.haute') },
-    { value: 'normale', label: t('alerts.priority.normale') },
-    { value: 'basse', label: t('alerts.priority.basse') },
-  ];
-
-  const statuses = [
-    { value: 'all', label: t('common.all') },
-    { value: 'active', label: t('alerts.status.active') },
-    { value: 'acknowledged', label: t('alerts.status.acknowledged') },
-    { value: 'resolved', label: t('alerts.status.resolved') },
-  ];
-
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      critique: 'bg-red-100 text-red-800 border-red-200',
-      haute: 'bg-orange-100 text-orange-800 border-orange-200',
-      normale: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      basse: 'bg-blue-100 text-blue-800 border-blue-200',
-    };
-    return colors[priority] || 'bg-gray-100 text-gray-800';
-  };
+  const handleDismiss = (id: string) => setDismissedIds(prev => [...prev, id]);
+  const handleDismissAll = () => setDismissedIds(alerts.map(a => a.id));
 
   const getPriorityIcon = (priority: string) => {
-    if (priority === 'critique') return <XCircle className="h-4 w-4 text-red-500" />;
-    if (priority === 'haute') return <AlertTriangle className="h-4 w-4 text-orange-500" />;
-    if (priority === 'normale') return <Bell className="h-4 w-4 text-yellow-500" />;
-    return <Info className="h-4 w-4 text-blue-500" />;
+    switch (priority) {
+      case 'critique': return <XCircle size={18} className="text-red-400" />;
+      case 'haute': return <AlertTriangle size={18} className="text-orange-400" />;
+      case 'normale': return <Bell size={18} className="text-yellow-400" />;
+      default: return <Info size={18} className="text-blue-400" />;
+    }
   };
 
-  const filteredAlerts = alerts.filter((alert: any) => {
-    const matchSearch = !searchQuery ||
-      (alert.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (alert.message || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchPriority = filterPriority === 'all' || alert.priority === filterPriority;
-    const matchStatus = filterStatus === 'all' || alert.status === filterStatus;
-    return matchSearch && matchPriority && matchStatus;
-  });
+  const getPriorityBorder = (priority: string) => {
+    switch (priority) {
+      case 'critique': return 'border-l-red-500';
+      case 'haute': return 'border-l-orange-500';
+      case 'normale': return 'border-l-yellow-500';
+      default: return 'border-l-blue-500';
+    }
+  };
 
-  const activeCount = alerts.filter((a: any) => a.status === 'active').length;
-  const criticalCount = alerts.filter((a: any) => a.priority === 'critique' && a.status === 'active').length;
+  const criticalCount = visibleAlerts.filter(a => a.priority === 'critique').length;
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{t('alerts.title')}</h1>
-            <p className="text-muted-foreground mt-1">
-              {activeCount} {t('alerts.active')} · {criticalCount} {t('alerts.critical')}
-            </p>
+            <h1 className="text-2xl font-bold text-white">Alertes</h1>
+            <p className="text-gray-400 mt-1">{visibleAlerts.length} alertes actives, {criticalCount} critiques</p>
           </div>
+          {visibleAlerts.length > 0 && (
+            <Button variant="outline" className="border-gray-700 text-gray-300" onClick={handleDismissAll}>
+              Tout marquer comme lu
+            </Button>
+          )}
         </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: t('alerts.total'), value: alerts.length, color: 'text-foreground' },
-            { label: t('alerts.active'), value: activeCount, color: 'text-orange-600' },
-            { label: t('alerts.critical'), value: criticalCount, color: 'text-red-600' },
-            { label: t('alerts.resolved'), value: alerts.filter((a: any) => a.status === 'resolved').length, color: 'text-green-600' },
-          ].map((kpi) => (
-            <Card key={kpi.label}>
-              <CardContent className="pt-4 pb-4">
-                <p className="text-sm text-muted-foreground">{kpi.label}</p>
-                <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-white">{visibleAlerts.length}</p>
+              <p className="text-gray-400 text-sm">Total alertes</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-red-400">{criticalCount}</p>
+              <p className="text-gray-400 text-sm">Critiques</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-orange-400">{visibleAlerts.filter(a => a.priority === 'haute').length}</p>
+              <p className="text-gray-400 text-sm">Haute priorite</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-green-400">{dismissedIds.length}</p>
+              <p className="text-gray-400 text-sm">Resolues</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <Input
-              placeholder={t('common.search')}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              onChange={e => setSearchQuery(e.target.value)}
+              className="bg-gray-900 border-gray-800 text-white pl-10"
+              placeholder="Rechercher une alerte..."
             />
           </div>
-          <Select value={filterPriority} onValueChange={setFilterPriority}>
-            <SelectTrigger className="w-48">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder={t('alerts.priority.label')} />
-            </SelectTrigger>
-            <SelectContent>
-              {priorities.map(p => (
-                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder={t('common.status')} />
-            </SelectTrigger>
-            <SelectContent>
-              {statuses.map(s => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            value={filterPriority}
+            onChange={e => setFilterPriority(e.target.value)}
+            className="bg-gray-900 border border-gray-800 text-white rounded px-3 py-2"
+          >
+            <option value="all">Toutes priorites</option>
+            <option value="critique">Critique</option>
+            <option value="haute">Haute</option>
+            <option value="normale">Normale</option>
+            <option value="basse">Basse</option>
+          </select>
         </div>
 
-        {/* Loading */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        )}
-
-        {/* Alerts List */}
-        {!isLoading && (
+        {filteredAlerts.length === 0 ? (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-12 text-center">
+              <CheckCircle size={48} className="mx-auto mb-4 text-green-500" />
+              <p className="text-gray-400 text-lg">Aucune alerte</p>
+              <p className="text-gray-500 text-sm mt-2">Tout est en ordre</p>
+            </CardContent>
+          </Card>
+        ) : (
           <div className="space-y-3">
-            {filteredAlerts.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium">{t('common.noData')}</p>
-                  <p className="text-muted-foreground mt-1">{t('alerts.noAlerts')}</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredAlerts.map((alert: any) => (
-                <Card key={alert.id} className={`border-l-4 ${
-                  alert.priority === 'critique' ? 'border-l-red-500' :
-                  alert.priority === 'haute' ? 'border-l-orange-500' :
-                  alert.priority === 'normale' ? 'border-l-yellow-500' : 'border-l-blue-500'
-                } ${alert.status === 'resolved' ? 'opacity-60' : ''}`}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
-                        {getPriorityIcon(alert.priority || 'normale')}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold">{alert.title || t('alerts.alert')}</p>
-                            <Badge className={getPriorityColor(alert.priority || 'normale')}>
-                              {priorities.find(p => p.value === alert.priority)?.label || alert.priority}
-                            </Badge>
-                            {alert.status === 'resolved' && (
-                              <Badge className="bg-green-100 text-green-800">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />{t('alerts.status.resolved')}
-                              </Badge>
-                            )}
-                            {alert.status === 'acknowledged' && (
-                              <Badge variant="outline">{t('alerts.status.acknowledged')}</Badge>
-                            )}
-                          </div>
-                          {alert.message && (
-                            <p className="text-sm text-muted-foreground mt-1">{alert.message}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {new Date(alert.createdAt || Date.now()).toLocaleDateString('fr-FR', {
-                              day: '2-digit', month: 'long', year: 'numeric',
-                              hour: '2-digit', minute: '2-digit'
-                            })}
-                          </p>
+            {filteredAlerts.map(alert => (
+              <Card key={alert.id} className={`bg-gray-900 border-gray-800 border-l-4 ${getPriorityBorder(alert.priority)}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      {getPriorityIcon(alert.priority)}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-white font-medium">{alert.title}</p>
+                          <Badge variant="outline" className={
+                            alert.priority === 'critique' ? 'border-red-600 text-red-400' :
+                            alert.priority === 'haute' ? 'border-orange-600 text-orange-400' :
+                            alert.priority === 'normale' ? 'border-yellow-600 text-yellow-400' :
+                            'border-blue-600 text-blue-400'
+                          }>
+                            {alert.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-400 text-sm">{alert.message}</p>
+                        <div className="flex items-center gap-1 mt-2 text-xs text-gray-600">
+                          <Clock size={12} />
+                          <span>{alert.createdAt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
-                      {alert.status !== 'resolved' && (
-                        <div className="flex gap-2 shrink-0">
-                          {alert.status === 'active' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateMutation.mutate({ id: alert.id, status: 'lue' })}
-                              disabled={updateMutation.isPending}
-                            >
-                              {t('alerts.acknowledge')}
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            onClick={() => updateMutation.mutate({ id: alert.id, status: 'resolue' })}
-                            disabled={updateMutation.isPending}
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            {t('alerts.resolve')}
-                          </Button>
-                        </div>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-gray-700 text-gray-300 shrink-0"
+                      onClick={() => handleDismiss(alert.id)}
+                    >
+                      <CheckCircle size={14} className="mr-1" /> Resoudre
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>

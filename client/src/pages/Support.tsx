@@ -1,282 +1,281 @@
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, MessageSquare, Clock, CheckCircle, AlertCircle, Phone, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { Headphones, Plus, MessageSquare, Clock, CheckCircle, AlertCircle, Phone, Mail } from 'lucide-react';
+
+const GOLD = "#C9A84C";
+
+interface Ticket {
+  id: string;
+  subject: string;
+  message: string;
+  priority: 'haute' | 'moyenne' | 'basse';
+  status: 'ouvert' | 'en_cours' | 'resolu';
+  createdAt: Date;
+  responses: Array<{ from: string; message: string; date: Date }>;
+}
 
 export default function Support() {
-  const { t } = useLanguage();
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isLoading] = useState(false);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [newTicket, setNewTicket] = useState({ subject: '', message: '', priority: 'moyenne' as 'haute' | 'moyenne' | 'basse' });
+  const [replyText, setReplyText] = useState('');
 
-  // Mock tickets data
-  const tickets = [
-    {
-      id: 1,
-      number: 'TKT-2026-001',
-      title: 'Problème de paiement',
-      description: 'Le paiement n\'a pas été traité correctement',
-      status: 'open',
-      priority: 'high',
-      createdAt: '2026-03-23',
-      updatedAt: '2026-03-23',
-      responses: 2,
-    },
-    {
-      id: 2,
-      number: 'TKT-2026-002',
-      title: 'Demande de remboursement',
-      description: 'Je souhaite annuler ma mission',
-      status: 'in_progress',
-      priority: 'medium',
-      createdAt: '2026-03-22',
-      updatedAt: '2026-03-23',
-      responses: 1,
-    },
-    {
-      id: 3,
-      number: 'TKT-2026-003',
-      title: 'Suggestion de fonctionnalité',
-      description: 'Ajouter la possibilité de programmer des missions',
-      status: 'resolved',
-      priority: 'low',
-      createdAt: '2026-03-20',
-      updatedAt: '2026-03-22',
-      responses: 3,
-    },
-  ];
+  const handleCreate = () => {
+    if (!newTicket.subject || !newTicket.message) return;
+    const ticket: Ticket = {
+      id: `T-${Date.now()}`,
+      subject: newTicket.subject,
+      message: newTicket.message,
+      priority: newTicket.priority,
+      status: 'ouvert',
+      createdAt: new Date(),
+      responses: [],
+    };
+    setTickets([ticket, ...tickets]);
+    setNewTicket({ subject: '', message: '', priority: 'moyenne' });
+    setShowForm(false);
+  };
 
-  const statuses = [
-    { value: 'all', label: t('common.all') },
-    { value: 'open', label: t('support.open') },
-    { value: 'in_progress', label: t('support.inProgress') },
-    { value: 'resolved', label: t('support.resolved') },
-  ];
+  const handleReply = () => {
+    if (!replyText || !selectedTicket) return;
+    const updated = tickets.map(t => {
+      if (t.id === selectedTicket.id) {
+        return {
+          ...t,
+          status: 'en_cours' as const,
+          responses: [...t.responses, { from: 'Admin', message: replyText, date: new Date() }],
+        };
+      }
+      return t;
+    });
+    setTickets(updated);
+    setSelectedTicket(updated.find(t => t.id === selectedTicket.id) || null);
+    setReplyText('');
+  };
 
-  const filteredTickets = tickets.filter(
-    (ticket) => statusFilter === 'all' || ticket.status === statusFilter
-  );
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'open':
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
-      case 'in_progress':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
-      case 'resolved':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
-      default:
-        return null;
+  const handleResolve = (id: string) => {
+    setTickets(tickets.map(t => t.id === id ? { ...t, status: 'resolu' as const } : t));
+    if (selectedTicket?.id === id) {
+      setSelectedTicket({ ...selectedTicket, status: 'resolu' });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open':
-        return 'bg-red-100 text-red-800';
-      case 'in_progress':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'resolved':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const priorityColors: Record<string, string> = {
+    haute: 'border-red-600 text-red-400',
+    moyenne: 'border-yellow-600 text-yellow-400',
+    basse: 'border-green-600 text-green-400',
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t('support.title')}</h1>
-            <p className="text-muted-foreground mt-2">{t('support.description')}</p>
+            <h1 className="text-2xl font-bold text-white">Support</h1>
+            <p className="text-gray-400 mt-1">Gestion des tickets de support et demandes d'assistance</p>
           </div>
-          <Button size="lg" className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('support.newTicket')}
+          <Button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: GOLD }} className="text-black">
+            <Plus size={16} className="mr-2" /> Nouveau ticket
           </Button>
         </div>
 
-        {/* Contact Info */}
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-6">
+        {/* Contact rapide */}
+        <Card className="bg-gray-900 border-gray-800">
+          <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-blue-600" />
+                <Mail size={20} style={{ color: GOLD }} />
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('support.email')}</p>
-                  <p className="font-semibold">contact@mschauffeur.fr</p>
+                  <p className="text-gray-400 text-sm">Email</p>
+                  <p className="text-white font-medium">contact@mschauffeur.fr</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Phone className="h-5 w-5 text-blue-600" />
+                <Phone size={20} style={{ color: GOLD }} />
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('support.phone')}</p>
-                  <p className="font-semibold">+33 6 95 61 89 98</p>
+                  <p className="text-gray-400 text-sm">Telephone</p>
+                  <p className="text-white font-medium">+33 6 95 61 89 98</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Create Ticket */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('support.createTicket')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('support.subject')}</label>
-              <Input placeholder={t('support.subjectPlaceholder')} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('support.description')}</label>
-              <Textarea
-                placeholder={t('support.descriptionPlaceholder')}
-                rows={4}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('support.priority')}</label>
-                <Select defaultValue="medium">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">{t('support.low')}</SelectItem>
-                    <SelectItem value="medium">{t('support.medium')}</SelectItem>
-                    <SelectItem value="high">{t('support.high')}</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-white">{tickets.length}</p>
+              <p className="text-gray-400 text-sm">Total tickets</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-red-400">{tickets.filter(t => t.status === 'ouvert').length}</p>
+              <p className="text-gray-400 text-sm">Ouverts</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-yellow-400">{tickets.filter(t => t.status === 'en_cours').length}</p>
+              <p className="text-gray-400 text-sm">En cours</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-green-400">{tickets.filter(t => t.status === 'resolu').length}</p>
+              <p className="text-gray-400 text-sm">Resolus</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {showForm && (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 space-y-4">
+              <p className="text-white font-medium">Creer un ticket</p>
+              <div>
+                <label className="text-sm text-gray-400 block mb-1">Sujet</label>
+                <Input
+                  value={newTicket.subject}
+                  onChange={e => setNewTicket(p => ({ ...p, subject: e.target.value }))}
+                  className="bg-gray-800 border-gray-700 text-white"
+                  placeholder="Objet du ticket"
+                />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('support.category')}</label>
-                <Select defaultValue="general">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">{t('support.general')}</SelectItem>
-                    <SelectItem value="payment">{t('support.payment')}</SelectItem>
-                    <SelectItem value="technical">{t('support.technical')}</SelectItem>
-                    <SelectItem value="feature">{t('support.feature')}</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div>
+                <label className="text-sm text-gray-400 block mb-1">Message</label>
+                <textarea
+                  value={newTicket.message}
+                  onChange={e => setNewTicket(p => ({ ...p, message: e.target.value }))}
+                  className="w-full bg-gray-800 border border-gray-700 text-white rounded p-3 min-h-[100px]"
+                  placeholder="Decrivez votre probleme..."
+                />
               </div>
-            </div>
-            <Button className="w-full">{t('support.submit')}</Button>
-          </CardContent>
-        </Card>
-
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('common.filter')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {status.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {/* Tickets List */}
-        {!isLoading && filteredTickets.length > 0 && (
-          <div className="space-y-3">
-            {filteredTickets.map((ticket) => (
-              <Card key={ticket.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="flex-shrink-0 mt-1">
-                        {getStatusIcon(ticket.status)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold">{ticket.number}</h3>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                            {statuses.find((s) => s.value === ticket.status)?.label}
-                          </span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                            {ticket.priority === 'high' ? t('support.high') : ticket.priority === 'medium' ? t('support.medium') : t('support.low')}
-                          </span>
-                        </div>
-                        <p className="font-medium mb-1">{ticket.title}</p>
-                        <p className="text-sm text-muted-foreground mb-2">{ticket.description}</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>
-                            {new Date(ticket.createdAt).toLocaleDateString('fr-FR')}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <MessageSquare className="h-3 w-3" />
-                            {ticket.responses} {t('support.responses')}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button size="sm" variant="outline">
-                      {t('common.view')}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && filteredTickets.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">{t('common.noData')}</h3>
-              <p className="text-muted-foreground mt-2">{t('support.noTickets')}</p>
+              <div>
+                <label className="text-sm text-gray-400 block mb-1">Priorite</label>
+                <select
+                  value={newTicket.priority}
+                  onChange={e => setNewTicket(p => ({ ...p, priority: e.target.value as any }))}
+                  className="bg-gray-800 border border-gray-700 text-white rounded px-3 py-2"
+                >
+                  <option value="basse">Basse</option>
+                  <option value="moyenne">Moyenne</option>
+                  <option value="haute">Haute</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCreate} style={{ backgroundColor: GOLD }} className="text-black">Creer le ticket</Button>
+                <Button onClick={() => setShowForm(false)} variant="outline" className="border-gray-700 text-gray-300">Annuler</Button>
+              </div>
             </CardContent>
           </Card>
         )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            {tickets.length === 0 ? (
+              <Card className="bg-gray-900 border-gray-800">
+                <CardContent className="p-12 text-center">
+                  <Headphones size={48} className="mx-auto mb-4 text-gray-600" />
+                  <p className="text-gray-400 text-lg">Aucun ticket de support</p>
+                  <p className="text-gray-500 text-sm mt-2">Creez un ticket pour commencer</p>
+                </CardContent>
+              </Card>
+            ) : (
+              tickets.map(ticket => (
+                <Card
+                  key={ticket.id}
+                  className={`bg-gray-900 border-gray-800 cursor-pointer transition-all ${selectedTicket?.id === ticket.id ? 'ring-1' : ''}`}
+                  style={selectedTicket?.id === ticket.id ? { borderColor: GOLD } : {}}
+                  onClick={() => setSelectedTicket(ticket)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {ticket.status === 'ouvert' && <AlertCircle size={16} className="text-red-400" />}
+                          {ticket.status === 'en_cours' && <Clock size={16} className="text-yellow-400" />}
+                          {ticket.status === 'resolu' && <CheckCircle size={16} className="text-green-400" />}
+                          <p className="text-white font-medium">{ticket.subject}</p>
+                        </div>
+                        <p className="text-gray-400 text-sm line-clamp-1">{ticket.message}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <Badge variant="outline" className={priorityColors[ticket.priority]}>
+                            {ticket.priority}
+                          </Badge>
+                          <span className="text-gray-600 text-xs">
+                            {ticket.createdAt.toLocaleDateString('fr-FR')}
+                          </span>
+                          {ticket.responses.length > 0 && (
+                            <span className="text-gray-500 text-xs flex items-center gap-1">
+                              <MessageSquare size={12} /> {ticket.responses.length}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {selectedTicket && (
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-bold text-lg">{selectedTicket.subject}</p>
+                    <p className="text-gray-500 text-xs">{selectedTicket.id}</p>
+                  </div>
+                  {selectedTicket.status !== 'resolu' && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleResolve(selectedTicket.id)}
+                      className="bg-green-600 text-white hover:bg-green-700"
+                    >
+                      <CheckCircle size={14} className="mr-1" /> Marquer resolu
+                    </Button>
+                  )}
+                </div>
+
+                <div className="bg-gray-800 rounded p-3">
+                  <p className="text-gray-400 text-xs mb-1">Message initial</p>
+                  <p className="text-white text-sm">{selectedTicket.message}</p>
+                </div>
+
+                {selectedTicket.responses.map((r, i) => (
+                  <div key={i} className="bg-gray-800/50 rounded p-3 border-l-2" style={{ borderColor: GOLD }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium" style={{ color: GOLD }}>{r.from}</p>
+                      <p className="text-gray-600 text-xs">{r.date.toLocaleString('fr-FR')}</p>
+                    </div>
+                    <p className="text-white text-sm">{r.message}</p>
+                  </div>
+                ))}
+
+                {selectedTicket.status !== 'resolu' && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      className="bg-gray-800 border-gray-700 text-white"
+                      placeholder="Votre reponse..."
+                      onKeyDown={e => e.key === 'Enter' && handleReply()}
+                    />
+                    <Button onClick={handleReply} style={{ backgroundColor: GOLD }} className="text-black">
+                      Envoyer
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );
