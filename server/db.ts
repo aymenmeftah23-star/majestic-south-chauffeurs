@@ -1,0 +1,475 @@
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
+import { InsertUser, users, clients, chauffeurs, vehicles, demands, missions, quotes, alerts } from "../drizzle/schema";
+import { ENV } from './_core/env';
+
+// ============================================================
+// DONNÉES DÉMO - utilisées quand la base de données MySQL
+// n'est pas disponible (développement local sans BDD)
+// ============================================================
+export const DEMO_CLIENTS = [
+  { id: 1, name: 'Jean-Pierre Martin', email: 'jp.martin@email.com', phone: '+33 6 12 34 56 78', company: 'Martin & Associés', address: 'Paris 8ème', notes: 'Client VIP', createdAt: new Date('2025-01-15') },
+  { id: 2, name: 'Sophie Dubois', email: 'sophie.dubois@luxe.fr', phone: '+33 6 98 76 54 32', company: 'Luxe Events', address: 'Paris 16ème', notes: 'Événements corporate', createdAt: new Date('2025-02-01') },
+  { id: 3, name: 'Marc Lefebvre', email: 'marc.l@finance.com', phone: '+33 7 11 22 33 44', company: 'Finance Corp', address: 'La Défense', notes: 'Déplacements fréquents', createdAt: new Date('2025-03-10') },
+];
+export const DEMO_CHAUFFEURS = [
+  { id: 1, name: 'Ahmed Benali', email: 'ahmed.b@majestic.com', phone: '+33 6 55 44 33 22', licenseNumber: 'VTC-2024-001', languages: 'Français, Arabe, Anglais', status: 'disponible', notes: 'Chauffeur senior', createdAt: new Date('2024-06-01') },
+  { id: 2, name: 'Pierre Moreau', email: 'pierre.m@majestic.com', phone: '+33 6 77 88 99 00', licenseNumber: 'VTC-2024-002', languages: 'Français, Anglais', status: 'en_mission', notes: 'Spécialiste aéroport', createdAt: new Date('2024-07-15') },
+  { id: 3, name: 'Karim Ouali', email: 'karim.o@majestic.com', phone: '+33 6 11 22 33 44', licenseNumber: 'VTC-2024-003', languages: 'Français, Anglais, Espagnol', status: 'disponible', notes: 'Multilingue', createdAt: new Date('2024-08-20') },
+];
+export const DEMO_VEHICLES = [
+  { id: 1, brand: 'Mercedes', model: 'Classe E', licensePlate: 'AB-123-CD', year: 2023, category: 'berline', status: 'disponible', color: 'Noir', seats: 4, notes: 'Véhicule principal', nextMaintenance: new Date('2026-06-01') },
+  { id: 2, brand: 'BMW', model: 'Série 7', licensePlate: 'EF-456-GH', year: 2022, category: 'berline_luxe', status: 'en_service', color: 'Blanc', seats: 4, notes: 'Prestige', nextMaintenance: new Date('2026-04-15') },
+  { id: 3, brand: 'Mercedes', model: 'Vito', licensePlate: 'IJ-789-KL', year: 2023, category: 'van', status: 'disponible', color: 'Noir', seats: 7, notes: 'Groupes', nextMaintenance: new Date('2026-07-01') },
+];
+export const DEMO_DEMANDS = [
+  { id: 1, clientId: 1, origin: 'Paris CDG Terminal 2', destination: 'Paris 8ème - Hôtel Plaza', date: new Date('2026-03-25T08:30:00'), passengers: 2, status: 'en_attente', serviceType: 'aeroport', notes: 'Vol AF1234', createdAt: new Date('2026-03-20'), assignedTo: null },
+  { id: 2, clientId: 2, origin: 'Paris 16ème', destination: 'Versailles - Château', date: new Date('2026-03-26T14:00:00'), passengers: 4, status: 'confirmee', serviceType: 'evenement', notes: 'Soirée gala', createdAt: new Date('2026-03-21'), assignedTo: null },
+  { id: 3, clientId: 3, origin: 'La Défense - Tour Total', destination: 'Paris Orly', date: new Date('2026-03-27T06:00:00'), passengers: 1, status: 'en_attente', serviceType: 'affaires', notes: 'Départ tôt', createdAt: new Date('2026-03-22'), assignedTo: null },
+];
+export const DEMO_MISSIONS = [
+  { id: 1, number: 'MSN-2026-001', clientId: 1, chauffeurId: 1, vehicleId: 1, type: 'Transfert', origin: 'Paris CDG Terminal 2', destination: 'Paris 8ème - Hôtel Plaza', date: new Date('2026-03-23T08:30:00'), status: 'en_cours', price: 180, priceHT: 150, vatRate: 20, paymentStatus: 'non_paye', passengers: 1, luggage: 2, notes: 'Vol AF1234', specialInstructions: 'Panneau avec nom client', createdAt: new Date('2026-03-20') },
+  { id: 2, number: 'MSN-2026-002', clientId: 2, chauffeurId: 2, vehicleId: 2, type: 'Mise à disposition', origin: 'Paris 16ème', destination: 'Versailles', date: new Date('2026-03-22T14:00:00'), status: 'terminee', price: 300, priceHT: 250, vatRate: 20, paymentStatus: 'paye', passengers: 4, luggage: 3, notes: 'Soirée gala', specialInstructions: null, createdAt: new Date('2026-03-21') },
+  { id: 3, number: 'MSN-2026-003', clientId: 3, chauffeurId: 3, vehicleId: 3, type: 'Transfert', origin: 'La Défense', destination: 'Paris Orly', date: new Date('2026-03-24T06:00:00'), status: 'a_confirmer', price: 132, priceHT: 120, vatRate: 10, paymentStatus: 'non_paye', passengers: 1, luggage: 1, notes: null, specialInstructions: null, createdAt: new Date('2026-03-22') },
+  { id: 4, number: 'MSN-2026-004', clientId: 1, chauffeurId: 1, vehicleId: 1, type: 'Transfert', origin: 'Paris Gare du Nord', destination: 'Paris 1er - Hôtel Ritz', date: new Date('2026-03-21T16:00:00'), status: 'terminee', price: 104.50, priceHT: 95, vatRate: 10, paymentStatus: 'paye', passengers: 2, luggage: 2, notes: 'Eurostar', specialInstructions: null, createdAt: new Date('2026-03-19') },
+  { id: 5, number: 'MSN-2026-005', clientId: 2, chauffeurId: 2, vehicleId: 2, type: 'Transfert', origin: 'Paris 8ème', destination: 'Paris CDG Terminal 1', date: new Date('2026-03-20T05:30:00'), status: 'terminee', price: 176, priceHT: 160, vatRate: 10, paymentStatus: 'paye', passengers: 1, luggage: 2, notes: null, specialInstructions: null, createdAt: new Date('2026-03-18') },
+];
+export const DEMO_QUOTES = [
+  { id: 1, demandId: 1, number: 'DEV-2026-001', price: 180, priceHT: 150, vatRate: 20, status: 'envoye', validUntil: new Date('2026-04-25'), notes: 'Tarif standard aéroport', createdAt: new Date('2026-03-20') },
+  { id: 2, demandId: 2, number: 'DEV-2026-002', price: 300, priceHT: 250, vatRate: 20, status: 'accepte', validUntil: new Date('2026-04-26'), notes: 'Tarif événement premium', createdAt: new Date('2026-03-21') },
+  { id: 3, demandId: 3, number: 'DEV-2026-003', price: 132, priceHT: 120, vatRate: 10, status: 'brouillon', validUntil: new Date('2026-04-27'), notes: 'Tarif transfert aéroport', createdAt: new Date('2026-03-22') },
+];
+export const DEMO_ALERTS = [
+  { id: 1, type: 'maintenance', title: 'Maintenance BMW Série 7', message: 'Révision prévue dans 3 semaines', priority: 'haute', status: 'active', vehicleId: 2, chauffeurId: null, createdAt: new Date('2026-03-23') },
+  { id: 2, type: 'retard', title: 'Retard mission #1', message: 'Trafic dense sur A1 - retard estimé 20 min', priority: 'urgente', status: 'active', vehicleId: null, chauffeurId: 1, createdAt: new Date('2026-03-23') },
+  { id: 3, type: 'info', title: 'Nouveau client enregistré', message: 'Marc Lefebvre - Finance Corp', priority: 'normale', status: 'lue', vehicleId: null, chauffeurId: null, createdAt: new Date('2026-03-22') },
+];
+
+
+let _db: ReturnType<typeof drizzle> | null = null;
+
+// Lazily create the drizzle instance so local tooling can run without a DB.
+export async function getDb() {
+  if (!_db && process.env.DATABASE_URL) {
+    const url = process.env.DATABASE_URL;
+    // Ne pas tenter de connexion MySQL avec une URL SQLite ou invalide
+    if (url.startsWith('file:') || url.startsWith('sqlite:') || !url.includes('://')) {
+      console.warn('[Database] Skipping non-MySQL URL, using demo data:', url);
+      return null;
+    }
+    try {
+      _db = drizzle(url);
+    } catch (error) {
+      console.warn("[Database] Failed to connect:", error);
+      _db = null;
+    }
+  }
+  return _db;
+}
+
+export async function upsertUser(user: InsertUser): Promise<void> {
+  if (!user.openId) {
+    throw new Error("User openId is required for upsert");
+  }
+
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot upsert user: database not available");
+    return;
+  }
+
+  try {
+    const values: InsertUser = {
+      openId: user.openId,
+    };
+    const updateSet: Record<string, unknown> = {};
+
+    const textFields = ["name", "email", "loginMethod"] as const;
+    type TextField = (typeof textFields)[number];
+
+    const assignNullable = (field: TextField) => {
+      const value = user[field];
+      if (value === undefined) return;
+      const normalized = value ?? null;
+      values[field] = normalized;
+      updateSet[field] = normalized;
+    };
+
+    textFields.forEach(assignNullable);
+
+    if (user.lastSignedIn !== undefined) {
+      values.lastSignedIn = user.lastSignedIn;
+      updateSet.lastSignedIn = user.lastSignedIn;
+    }
+    if (user.role !== undefined) {
+      values.role = user.role;
+      updateSet.role = user.role;
+    } else if (user.openId === ENV.ownerOpenId) {
+      values.role = 'admin';
+      updateSet.role = 'admin';
+    }
+
+    if (!values.lastSignedIn) {
+      values.lastSignedIn = new Date();
+    }
+
+    if (Object.keys(updateSet).length === 0) {
+      updateSet.lastSignedIn = new Date();
+    }
+
+    await db.insert(users).values(values).onDuplicateKeyUpdate({
+      set: updateSet,
+    });
+  } catch (error) {
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
+}
+
+export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
+  if (!db) {
+    // Mode démo : retourner l'utilisateur démo
+    if (openId === 'demo-admin-001') {
+      return { id: 1, openId: 'demo-admin-001', name: 'Aymen MEFTAH', email: 'contact@mschauffeur.fr', role: 'admin', createdAt: new Date(), lastSignedIn: new Date(), loginMethod: null } as any;
+    }
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAllClients() {
+  const db = await getDb();
+  if (!db) return DEMO_CLIENTS as any[];
+  return await db.select().from(clients);
+}
+
+export async function getAllChauffeurs() {
+  const db = await getDb();
+  if (!db) return DEMO_CHAUFFEURS as any[];
+  return await db.select().from(chauffeurs);
+}
+
+export async function getAllVehicles() {
+  const db = await getDb();
+  if (!db) return DEMO_VEHICLES as any[];
+  return await db.select().from(vehicles);
+}
+
+export async function getAllDemands() {
+  const db = await getDb();
+  if (!db) return DEMO_DEMANDS as any[];
+  return await db.select().from(demands);
+}
+
+export async function getAllMissions() {
+  const db = await getDb();
+  if (!db) return DEMO_MISSIONS as any[];
+  return await db.select().from(missions);
+}
+
+export async function getAllQuotes() {
+  const db = await getDb();
+  if (!db) return DEMO_QUOTES as any[];
+  return await db.select().from(quotes);
+}
+
+export async function getAllAlerts() {
+  const db = await getDb();
+  if (!db) return DEMO_ALERTS as any[];
+  return await db.select().from(alerts);
+}
+
+// TODO: add more specific queries as needed
+
+// ==================== CLIENTS CRUD ====================
+export async function getClientById(id: number) {
+  const db = await getDb();
+  if (!db) return (DEMO_CLIENTS as any[]).find(x => x.id === id) ?? undefined;
+  const result = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createClient(data: typeof clients.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    const newId = Math.max(...DEMO_CLIENTS.map((c: any) => c.id), 0) + 1;
+    const newItem = { ...data, id: newId, createdAt: new Date() };
+    (DEMO_CLIENTS as any[]).push(newItem);
+    return newItem;
+  }
+  return await db.insert(clients).values(data);
+}
+
+export async function updateClient(id: number, data: Partial<typeof clients.$inferInsert>) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_CLIENTS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) Object.assign(DEMO_CLIENTS[idx], data);
+    return (DEMO_CLIENTS as any[])[idx];
+  }
+  await db.update(clients).set(data).where(eq(clients.id, id));
+  return await getClientById(id);
+}
+
+export async function deleteClient(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_CLIENTS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) (DEMO_CLIENTS as any[]).splice(idx, 1);
+    return { success: true };
+  }
+  await db.delete(clients).where(eq(clients.id, id));
+  return { success: true };
+}
+
+// ==================== CHAUFFEURS CRUD ====================
+export async function getChauffeurById(id: number) {
+  const db = await getDb();
+  if (!db) return (DEMO_CHAUFFEURS as any[]).find(x => x.id === id) ?? undefined;
+  const result = await db.select().from(chauffeurs).where(eq(chauffeurs.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createChauffeur(data: typeof chauffeurs.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    const newId = Math.max(...DEMO_CHAUFFEURS.map((c: any) => c.id), 0) + 1;
+    const newItem = { ...data, id: newId, createdAt: new Date() };
+    (DEMO_CHAUFFEURS as any[]).push(newItem);
+    return newItem;
+  }
+  return await db.insert(chauffeurs).values(data);
+}
+
+export async function updateChauffeur(id: number, data: Partial<typeof chauffeurs.$inferInsert>) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_CHAUFFEURS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) Object.assign(DEMO_CHAUFFEURS[idx], data);
+    return (DEMO_CHAUFFEURS as any[])[idx];
+  }
+  await db.update(chauffeurs).set(data).where(eq(chauffeurs.id, id));
+  return await getChauffeurById(id);
+}
+
+export async function deleteChauffeur(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_CHAUFFEURS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) (DEMO_CHAUFFEURS as any[]).splice(idx, 1);
+    return { success: true };
+  }
+  await db.delete(chauffeurs).where(eq(chauffeurs.id, id));
+  return { success: true };
+}
+
+// ==================== VEHICLES CRUD ====================
+export async function getVehicleById(id: number) {
+  const db = await getDb();
+  if (!db) return (DEMO_VEHICLES as any[]).find(x => x.id === id) ?? undefined;
+  const result = await db.select().from(vehicles).where(eq(vehicles.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createVehicle(data: typeof vehicles.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    const newId = Math.max(...DEMO_VEHICLES.map((c: any) => c.id), 0) + 1;
+    const newItem = { ...data, id: newId, createdAt: new Date() };
+    (DEMO_VEHICLES as any[]).push(newItem);
+    return newItem;
+  }
+  return await db.insert(vehicles).values(data);
+}
+
+export async function updateVehicle(id: number, data: Partial<typeof vehicles.$inferInsert>) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_VEHICLES as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) Object.assign(DEMO_VEHICLES[idx], data);
+    return (DEMO_VEHICLES as any[])[idx];
+  }
+  await db.update(vehicles).set(data).where(eq(vehicles.id, id));
+  return await getVehicleById(id);
+}
+
+export async function deleteVehicle(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_VEHICLES as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) (DEMO_VEHICLES as any[]).splice(idx, 1);
+    return { success: true };
+  }
+  await db.delete(vehicles).where(eq(vehicles.id, id));
+  return { success: true };
+}
+
+// ==================== DEMANDS CRUD ====================
+export async function getDemandById(id: number) {
+  const db = await getDb();
+  if (!db) return (DEMO_DEMANDS as any[]).find(x => x.id === id) ?? undefined;
+  const result = await db.select().from(demands).where(eq(demands.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createDemand(data: typeof demands.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    const newId = Math.max(...DEMO_DEMANDS.map((c: any) => c.id), 0) + 1;
+    const newItem = { ...data, id: newId, createdAt: new Date() };
+    (DEMO_DEMANDS as any[]).push(newItem);
+    return newItem;
+  }
+  return await db.insert(demands).values(data);
+}
+
+export async function updateDemand(id: number, data: Partial<typeof demands.$inferInsert>) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_DEMANDS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) Object.assign(DEMO_DEMANDS[idx], data);
+    return (DEMO_DEMANDS as any[])[idx];
+  }
+  await db.update(demands).set(data).where(eq(demands.id, id));
+  return await getDemandById(id);
+}
+
+export async function deleteDemand(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_DEMANDS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) (DEMO_DEMANDS as any[]).splice(idx, 1);
+    return { success: true };
+  }
+  await db.delete(demands).where(eq(demands.id, id));
+  return { success: true };
+}
+
+// ==================== MISSIONS CRUD ====================
+export async function getMissionById(id: number) {
+  const db = await getDb();
+  if (!db) return (DEMO_MISSIONS as any[]).find(x => x.id === id) ?? undefined;
+  const result = await db.select().from(missions).where(eq(missions.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createMission(data: typeof missions.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    const newId = Math.max(...DEMO_MISSIONS.map((c: any) => c.id), 0) + 1;
+    const nextNum = String(newId).padStart(3, '0');
+    const newItem = { ...data, id: newId, number: `MSN-2026-${nextNum}`, createdAt: new Date() };
+    (DEMO_MISSIONS as any[]).push(newItem);
+    return newItem;
+  }
+  return await db.insert(missions).values(data);
+}
+
+export async function updateMission(id: number, data: Partial<typeof missions.$inferInsert>) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_MISSIONS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) Object.assign(DEMO_MISSIONS[idx], data);
+    return (DEMO_MISSIONS as any[])[idx];
+  }
+  await db.update(missions).set(data).where(eq(missions.id, id));
+  return await getMissionById(id);
+}
+
+export async function deleteMission(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_MISSIONS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) (DEMO_MISSIONS as any[]).splice(idx, 1);
+    return { success: true };
+  }
+  await db.delete(missions).where(eq(missions.id, id));
+  return { success: true };
+}
+
+// ==================== QUOTES CRUD ====================
+export async function getQuoteById(id: number) {
+  const db = await getDb();
+  if (!db) return (DEMO_QUOTES as any[]).find(x => x.id === id) ?? undefined;
+  const result = await db.select().from(quotes).where(eq(quotes.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createQuote(data: typeof quotes.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    const newId = Math.max(...DEMO_QUOTES.map((c: any) => c.id), 0) + 1;
+    const nextNum = String(newId).padStart(3, '0');
+    const newItem = { ...data, id: newId, number: `DEV-2026-${nextNum}`, createdAt: new Date() };
+    (DEMO_QUOTES as any[]).push(newItem);
+    return newItem;
+  }
+  return await db.insert(quotes).values(data);
+}
+
+export async function updateQuote(id: number, data: Partial<typeof quotes.$inferInsert>) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_QUOTES as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) Object.assign(DEMO_QUOTES[idx], data);
+    return (DEMO_QUOTES as any[])[idx];
+  }
+  await db.update(quotes).set(data).where(eq(quotes.id, id));
+  return await getQuoteById(id);
+}
+
+export async function deleteQuote(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_QUOTES as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) (DEMO_QUOTES as any[]).splice(idx, 1);
+    return { success: true };
+  }
+  await db.delete(quotes).where(eq(quotes.id, id));
+  return { success: true };
+}
+
+// ==================== ALERTS CRUD ====================
+export async function getAlertById(id: number) {
+  const db = await getDb();
+  if (!db) return (DEMO_ALERTS as any[]).find(x => x.id === id) ?? undefined;
+  const result = await db.select().from(alerts).where(eq(alerts.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createAlert(data: typeof alerts.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    const newId = Math.max(...DEMO_ALERTS.map((c: any) => c.id), 0) + 1;
+    const newItem = { ...data, id: newId, createdAt: new Date() };
+    (DEMO_ALERTS as any[]).push(newItem);
+    return newItem;
+  }
+  return await db.insert(alerts).values(data);
+}
+
+export async function updateAlert(id: number, data: Partial<typeof alerts.$inferInsert>) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_ALERTS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) Object.assign(DEMO_ALERTS[idx], data);
+    return (DEMO_ALERTS as any[])[idx];
+  }
+  await db.update(alerts).set(data).where(eq(alerts.id, id));
+  return await getAlertById(id);
+}
+
+export async function deleteAlert(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const idx = (DEMO_ALERTS as any[]).findIndex((c: any) => c.id === id);
+    if (idx !== -1) (DEMO_ALERTS as any[]).splice(idx, 1);
+    return { success: true };
+  }
+  await db.delete(alerts).where(eq(alerts.id, id));
+  return { success: true };
+}
