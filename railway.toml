@@ -1,12 +1,12 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install --legacy-peer-deps && npm run build"
+buildCommand = "pnpm install --no-frozen-lockfile && pnpm run build"
 
 [build.nixpacksPlan.phases.setup]
 nixPkgs = ["nodejs_20", "nodePackages.pnpm"]
 
 [deploy]
-startCommand = "npm run start"
+startCommand = "pnpm run start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
