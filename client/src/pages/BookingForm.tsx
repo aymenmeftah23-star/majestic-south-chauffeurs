@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { MapPin, Users, CheckCircle, ChevronRight, ChevronLeft, Car, Calendar, Clock, Phone, Mail, User, CreditCard, Shield, Star, Plane, Briefcase, Timer, Map } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 const GOLD = "#C9A84C";
 const DARK = "#0a0a0a";
@@ -60,13 +61,14 @@ export default function BookingForm() {
     vehicleType: "berline", paymentMethod: "card",
   });
 
+  const createClient = trpc.clients.create.useMutation();
   const createDemand = trpc.demands.create.useMutation({
     onSuccess: () => setSubmitted(true),
   });
 
   const update = (field: keyof BookingData, value: any) => setData(prev => ({ ...prev, [field]: value }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const message = [
       data.firstName || data.lastName ? `Client: ${data.firstName} ${data.lastName}`.trim() : "",
       data.email ? `Email: ${data.email}` : "",
@@ -78,15 +80,42 @@ export default function BookingForm() {
       data.isRoundTrip && data.returnDate ? `Retour: ${data.returnDate} a ${data.returnTime}` : "",
     ].filter(Boolean).join(" | ");
 
-    createDemand.mutate({
-      clientId: 1,
-      origin: data.origin,
-      destination: data.destination,
-      date: new Date(data.date + "T" + (data.time || "12:00")).toISOString(),
-      passengers: data.passengers,
-      type: data.serviceType || 'transfer',
-      message,
-    });
+    try {
+      // Creer le client automatiquement a partir des informations du formulaire
+      const clientName = `${data.firstName} ${data.lastName}`.trim() || 'Client Web';
+      const clientResult = await createClient.mutateAsync({
+        name: clientName,
+        email: data.email || undefined,
+        phone: data.phone || '+33 0 00 00 00 00',
+        type: 'particulier',
+      });
+      const clientId = clientResult?.[0]?.insertId || 1;
+
+      createDemand.mutate({
+        clientId,
+        origin: data.origin,
+        destination: data.destination,
+        date: new Date(data.date + "T" + (data.time || "12:00")).toISOString(),
+        passengers: data.passengers,
+        type: data.serviceType || 'airport',
+        message,
+        status: 'nouvelle',
+        source: 'site_web',
+      });
+    } catch {
+      // Fallback: utiliser clientId 1 si la creation echoue
+      createDemand.mutate({
+        clientId: 1,
+        origin: data.origin,
+        destination: data.destination,
+        date: new Date(data.date + "T" + (data.time || "12:00")).toISOString(),
+        passengers: data.passengers,
+        type: data.serviceType || 'airport',
+        message,
+        status: 'nouvelle',
+        source: 'site_web',
+      });
+    }
   };
 
   const STEPS = [
@@ -174,13 +203,21 @@ export default function BookingForm() {
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-300 mb-1.5 block flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" />Adresse de départ</label>
-                <input type="text" value={data.origin} onChange={e => update("origin", e.target.value)} placeholder="Ex: Aéroport Nice Côte d'Azur, Terminal 1"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/50 focus:border-[#C9A84C] transition-all text-sm" />
+                <AddressAutocomplete
+                  value={data.origin}
+                  onChange={(v) => update("origin", v)}
+                  placeholder="Ex: Aéroport Nice Côte d'Azur, Terminal 1"
+                  variant="dark"
+                />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-300 mb-1.5 block flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />Adresse d'arrivée</label>
-                <input type="text" value={data.destination} onChange={e => update("destination", e.target.value)} placeholder="Ex: Hôtel Martinez, Cannes"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/50 focus:border-[#C9A84C] transition-all text-sm" />
+                <AddressAutocomplete
+                  value={data.destination}
+                  onChange={(v) => update("destination", v)}
+                  placeholder="Ex: Hôtel Martinez, Cannes"
+                  variant="dark"
+                />
               </div>
             </div>
 

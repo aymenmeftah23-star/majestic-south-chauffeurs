@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Eye, EyeOff, ArrowLeft, Mail, Building
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 const GOLD = "#d4af37";
 
@@ -444,15 +445,18 @@ export default function ClientPortal() {
       const dateTime = demandForm.time
         ? `${demandForm.date}T${demandForm.time}:00`
         : `${demandForm.date}T09:00:00`;
+      // Utiliser le vrai clientId du client connecte
+      const realClientId = clientUser.clientId || clientUser.id || 1;
       await createDemandMutation.mutateAsync({
-        clientId: 1,
+        clientId: realClientId,
         origin: demandForm.origin,
         destination: demandForm.destination,
         date: dateTime,
         passengers: parseInt(demandForm.passengers),
-        serviceType: demandForm.serviceType,
-        notes: demandForm.notes || `Demande de ${clientUser.name} (${clientUser.email})`,
+        type: demandForm.serviceType,
+        message: demandForm.notes || `Demande de ${clientUser.name} (${clientUser.email})`,
         status: "nouvelle",
+        source: "portail_client",
       });
     } catch {
       setDemandLoading(false);
@@ -689,17 +693,21 @@ export default function ClientPortal() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">Adresse de depart *</label>
-                        <input type="text" value={demandForm.origin}
-                          onChange={e => setDemandForm({ ...demandForm, origin: e.target.value })}
+                        <AddressAutocomplete
+                          value={demandForm.origin}
+                          onChange={(v) => setDemandForm({ ...demandForm, origin: v })}
                           placeholder="Adresse de prise en charge"
-                          className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-amber-900/30 text-white placeholder-gray-500 focus:outline-none focus:border-amber-600" />
+                          variant="dark"
+                        />
                       </div>
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">Adresse d'arrivee *</label>
-                        <input type="text" value={demandForm.destination}
-                          onChange={e => setDemandForm({ ...demandForm, destination: e.target.value })}
+                        <AddressAutocomplete
+                          value={demandForm.destination}
+                          onChange={(v) => setDemandForm({ ...demandForm, destination: v })}
                           placeholder="Adresse de destination"
-                          className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-amber-900/30 text-white placeholder-gray-500 focus:outline-none focus:border-amber-600" />
+                          variant="dark"
+                        />
                       </div>
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">Date *</label>

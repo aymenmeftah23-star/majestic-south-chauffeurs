@@ -453,7 +453,7 @@ export const appRouter = router({
       }),
     create: publicProcedure
       .input(z.object({
-        number: z.string().min(1),
+        number: z.string().optional(),
         clientId: z.number(),
         chauffeurId: z.number().optional(),
         vehicleId: z.number().optional(),
@@ -474,7 +474,8 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { date, ...rest } = input;
-        const mission = await createMission({ ...rest, date: new Date(date) });
+        const missionNumber = rest.number || `MSN-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+        const mission = await createMission({ ...rest, number: missionNumber, date: new Date(date) });
         
         // Notifications
         try {

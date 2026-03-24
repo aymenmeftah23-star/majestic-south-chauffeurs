@@ -58,11 +58,11 @@ async function startServer() {
   // Route d'inscription client
   app.post("/api/register", async (req, res) => {
     try {
-      const { firstName, lastName, email, phone, company, password, role } = req.body;
-      if (!email || !password || !firstName || !lastName) {
-        return res.status(400).json({ message: "Champs obligatoires manquants" });
+      const { firstName, lastName, name: fullName, email, phone, company, password, role } = req.body;
+      const name = fullName || (firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || "");
+      if (!email || !password || !name) {
+        return res.status(400).json({ message: "Nom, email et mot de passe sont obligatoires" });
       }
-      const name = `${firstName} ${lastName}`;
       const user = await createUser({ email, password, name, phone, role: role || "client" });
       try {
         const { getDb } = await import("../db");
@@ -70,11 +70,18 @@ async function startServer() {
         if (db) {
           const { clients } = await import("../../drizzle/schema");
           await db.insert(clients).values({
-            firstName, lastName, email, phone: phone || "", company: company || "",
-            type: "particulier", status: "actif",
-          });
+            name, email, phone: phone || "", company: company || "",
+            type: "particulier",
+          } as any);
         }
-      } catch (dbErr) { console.log("[Register] Client cree en memoire (DB non disponible)"); }
+      } catch (dbErr) {
+        // Fallback: creer le client en memoire via la fonction createClient
+        try {
+          const { createClient } = await import("../db");
+          await createClient({ name, email: email || "", phone: phone || "", company: company || "", type: "particulier" });
+        } catch (e2) { /* ignore */ }
+        console.log("[Register] Client cree en memoire");
+      }
       res.json({ success: true, user });
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
