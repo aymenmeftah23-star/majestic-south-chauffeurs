@@ -49,6 +49,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import Members from "./pages/Members";
 import DriverPortal from "./pages/DriverPortal";
+import DriverLogin from "./pages/DriverLogin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 
 function Router() {
@@ -117,6 +118,7 @@ function Router() {
       <Route path={"/bonuses"} component={Bonuses} />
       <Route path={"/members"} component={Members} />
       <Route path={"/driver"} component={DriverPortal} />
+      <Route path={"/driver/login"} component={DriverLogin} />
       <Route path={"/payment-success"} component={PaymentSuccess} />
 
       {/* Legacy routes (backward compat) */}

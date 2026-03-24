@@ -659,6 +659,40 @@ export const appRouter = router({
         });
         await updateQuote(input.quoteId, { status: 'accepte' });
         await updateDemand(demand.id, { status: 'convertie' });
+
+        // Envoyer un email de confirmation au client
+        try {
+          const client = demand.clientId ? await getClientById(demand.clientId) : null;
+          if (client?.email) {
+            const { sendBookingConfirmation } = await import('./email-service');
+            await sendBookingConfirmation({
+              clientEmail: client.email,
+              clientName: client.name,
+              missionNumber,
+              origin: demand.origin,
+              destination: demand.destination,
+              date: demand.date,
+              passengers: demand.passengers ?? 1,
+              price: quote.price,
+            });
+          }
+        } catch (emailErr) {
+          console.error('[convertToMission] Email error:', emailErr);
+        }
+
+        // Notifier l'admin en temps réel
+        try {
+          const { notificationService } = await import('./notification-service');
+          notificationService.broadcast({
+            type: 'mission_created',
+            title: 'Mission créée depuis devis',
+            message: `La mission ${missionNumber} a été créée automatiquement depuis le devis accepté`,
+            data: { missionNumber },
+          });
+        } catch (notifErr) {
+          console.error('[convertToMission] Notification error:', notifErr);
+        }
+
         return { success: true, missionNumber };
       }),
   }),

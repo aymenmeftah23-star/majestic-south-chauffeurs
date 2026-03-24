@@ -56,9 +56,26 @@ export default function DriverPortal() {
   const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "history">("today");
   const [selectedMission, setSelectedMission] = useState<any>(null);
 
+  // Informations du chauffeur connecté (depuis localStorage après login)
+  const driverName = localStorage.getItem("driver_user_name") || "Chauffeur";
+  const driverEmail = localStorage.getItem("driver_user_email") || "";
+
+  const handleLogout = () => {
+    localStorage.removeItem("driver_user_id");
+    localStorage.removeItem("driver_user_name");
+    localStorage.removeItem("driver_user_email");
+    setLocation("/driver/login");
+  };
+
   const { data: missionsData, isLoading } = trpc.missions.list.useQuery();
+  const utils = trpc.useUtils();
   const updateMissionMutation = trpc.missions.update.useMutation({
-    onSuccess: () => setSelectedMission(null),
+    onSuccess: (updatedMission) => {
+      // Invalider le cache pour forcer le rechargement des missions
+      utils.missions.list.invalidate();
+      utils.missions.getAll.invalidate();
+      setSelectedMission(null);
+    },
   });
 
   const allMissions: any[] = missionsData ?? [];
@@ -91,15 +108,15 @@ export default function DriverPortal() {
             <img src="/logo.png" alt="Majestic South" className="h-8 w-8 object-contain" />
             <div>
               <div className="font-bold text-xs tracking-widest" style={{ color: GOLD }}>MAJESTIC SOUTH</div>
-              <div className="text-xs text-gray-500">Espace Chauffeur</div>
+              <div className="text-xs text-gray-500">{driverName}</div>
             </div>
           </div>
           <button
-            onClick={() => setLocation("/")}
+            onClick={handleLogout}
             className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" />
-            <span>Quitter</span>
+            <span>Déconnexion</span>
           </button>
         </div>
       </header>

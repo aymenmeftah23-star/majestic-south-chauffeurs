@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Eye, EyeOff, ArrowLeft, Crown } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Car } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
-export default function LoginPage() {
+const GOLD = "#C9A84C";
+
+export default function DriverLogin() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,15 +18,18 @@ export default function LoginPage() {
       if (data.success) {
         const role = data.user?.role;
         if (role === "chauffeur") {
-          // Stocker les infos du chauffeur pour filtrer ses missions
+          // Stocker l'id chauffeur dans localStorage pour filtrer les missions
           if (data.user) {
             localStorage.setItem("driver_user_id", String(data.user.id));
             localStorage.setItem("driver_user_name", data.user.name);
             localStorage.setItem("driver_user_email", data.user.email);
           }
           window.location.href = "/driver";
-        } else {
+        } else if (role === "admin" || role === "gestionnaire") {
           window.location.href = "/dashboard";
+        } else {
+          setError("Votre compte n'a pas accès à cet espace.");
+          setLoading(false);
         }
       }
     },
@@ -38,58 +43,66 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
       await loginMutation.mutateAsync({ email, password });
     } catch {
-      // Erreur gérée par onError
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 relative">
+    <div className="min-h-screen flex items-center justify-center px-4 relative" style={{ background: "#0a0a0a" }}>
+      {/* Fond décoratif */}
       <div
         className="absolute inset-0 opacity-10"
-        style={{ backgroundImage: "radial-gradient(ellipse at 30% 50%, #d4af37 0%, transparent 60%)" }}
+        style={{ backgroundImage: `radial-gradient(ellipse at 30% 50%, ${GOLD} 0%, transparent 60%)` }}
       />
-      <div className="relative z-10 w-full max-w-md">
+
+      <div className="relative z-10 w-full max-w-sm">
         <button
           onClick={() => setLocation("/")}
-          className="flex items-center gap-2 text-gray-400 hover:text-amber-400 transition-colors mb-8 text-sm"
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8 text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
           Retour à l&apos;accueil
         </button>
 
-        <div className="bg-[#111] border border-amber-900/30 rounded-3xl p-8">
+        <div className="bg-[#111] border border-white/10 rounded-2xl p-8">
+          {/* Logo et titre */}
           <div className="text-center mb-8">
             <div
-              className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #d4af37, #b8960c)" }}
+              className="h-14 w-14 rounded-xl mx-auto mb-4 flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${GOLD}, #a07830)` }}
             >
-              <Crown className="h-8 w-8 text-black" />
+              <Car className="h-7 w-7 text-black" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">Connexion</h1>
-            <p className="text-gray-400 text-sm">Accédez à votre espace Majestic South</p>
+            <div className="text-xs font-bold tracking-widest mb-1" style={{ color: GOLD }}>
+              MAJESTIC SOUTH
+            </div>
+            <h1 className="text-xl font-bold text-white">Espace Chauffeur</h1>
+            <p className="text-gray-500 text-sm mt-1">Connectez-vous pour accéder à vos missions</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-2">Email</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide">
+                Adresse email
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="contact@mschauffeur.fr"
+                placeholder="chauffeur@mschauffeur.fr"
                 required
                 autoComplete="email"
-                className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-amber-900/30 text-white placeholder-gray-500 focus:outline-none focus:border-amber-600 transition-colors"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-amber-600/50 transition-colors text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-2">Mot de passe</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide">
+                Mot de passe
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -98,14 +111,14 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
-                  className="w-full px-4 py-3 pr-12 rounded-xl bg-[#1a1a1a] border border-amber-900/30 text-white placeholder-gray-500 focus:outline-none focus:border-amber-600 transition-colors"
+                  className="w-full px-4 py-3 pr-12 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-amber-600/50 transition-colors text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -119,19 +132,19 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl font-semibold text-black transition-all hover:scale-[1.02] disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #d4af37, #f5d56e, #b8960c)" }}
+              className="w-full py-3.5 rounded-xl font-semibold text-black transition-all hover:opacity-90 disabled:opacity-50 text-sm"
+              style={{ background: `linear-gradient(135deg, ${GOLD}, #a07830)` }}
             >
               {loading ? "Connexion en cours..." : "Se connecter"}
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-amber-900/20 text-center">
-            <p className="text-gray-500 text-xs">
-              Majestic South Chauffeurs &mdash; Espace privé
+          <div className="mt-6 pt-5 border-t border-white/5 text-center">
+            <p className="text-gray-600 text-xs">
+              Accès réservé aux chauffeurs Majestic South
             </p>
-            <p className="text-gray-600 text-xs mt-1">
-              Pour obtenir un accès, contactez l&apos;administrateur
+            <p className="text-gray-700 text-xs mt-1">
+              Pour obtenir un accès, contactez votre responsable
             </p>
           </div>
         </div>
