@@ -339,7 +339,42 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { date, ...rest } = input;
-        return await createDemand({ ...rest, date: new Date(date) });
+        const demand = await createDemand({ ...rest, date: new Date(date) });
+        
+        // Notifications
+        try {
+          const clients = await getAllClients();
+          const client = clients.find((c: any) => c.id === input.clientId);
+          
+          if (client) {
+            // Notification SSE à l'admin
+            import('./notification-service').then(({ notifyAdmins }) => {
+              notifyAdmins({
+                type: 'info',
+                title: 'Nouvelle demande',
+                message: `Nouvelle demande de ${client.name} (${input.origin} -> ${input.destination})`,
+                link: '/demands'
+              });
+            }).catch(console.error);
+            
+            // Email à l'admin
+            import('./email-service').then(({ sendNewDemandNotification }) => {
+              sendNewDemandNotification({
+                adminEmail: process.env.ADMIN_EMAIL || 'contact@mschauffeur.fr',
+                clientName: client.name,
+                origin: input.origin,
+                destination: input.destination,
+                date: new Date(date),
+                passengers: input.passengers || 1,
+                message: input.message
+              });
+            }).catch(console.error);
+          }
+        } catch (e) {
+          console.error("Erreur lors de l'envoi des notifications:", e);
+        }
+        
+        return demand;
       }),
     update: publicProcedure
       .input(z.object({
@@ -437,7 +472,68 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { date, ...rest } = input;
-        return await createMission({ ...rest, date: new Date(date) });
+        const mission = await createMission({ ...rest, date: new Date(date) });
+        
+        // Notifications
+        try {
+          const clients = await getAllClients();
+          const client = clients.find((c: any) => c.id === input.clientId);
+          
+          if (client) {
+            // Email de confirmation au client
+            import('./email-service').then(({ sendBookingConfirmation }) => {
+              if (client.email) {
+                sendBookingConfirmation({
+                  clientEmail: client.email,
+                  clientName: client.name,
+                  missionNumber: input.number,
+                  origin: input.origin,
+                  destination: input.destination,
+                  date: new Date(date),
+                  passengers: input.passengers || 1,
+                  price: input.price
+                });
+              }
+            }).catch(console.error);
+          }
+          
+          if (input.chauffeurId) {
+            const chauffeurs = await getAllChauffeurs();
+            const chauffeur = chauffeurs.find((c: any) => c.id === input.chauffeurId);
+            
+            if (chauffeur && chauffeur.email) {
+              // Email au chauffeur
+              import('./email-service').then(({ sendChauffeurAssignment }) => {
+                sendChauffeurAssignment({
+                  chauffeurEmail: chauffeur.email,
+                  chauffeurName: chauffeur.name,
+                  missionNumber: input.number,
+                  clientName: client ? client.name : 'Client',
+                  origin: input.origin,
+                  destination: input.destination,
+                  date: new Date(date),
+                  passengers: input.passengers || 1,
+                  specialInstructions: input.specialInstructions
+                });
+              }).catch(console.error);
+              
+              // Notification SSE au chauffeur (s'il est connecté)
+              // Note: dans une vraie app on utiliserait son userId, ici on simplifie
+              import('./notification-service').then(({ notifyUser }) => {
+                notifyUser(chauffeur.id, {
+                  type: 'success',
+                  title: 'Nouvelle mission',
+                  message: `Mission ${input.number} assignée : ${input.origin} -> ${input.destination}`,
+                  link: '/driver/missions'
+                });
+              }).catch(console.error);
+            }
+          }
+        } catch (e) {
+          console.error("Erreur lors de l'envoi des notifications:", e);
+        }
+        
+        return mission;
       }),
     update: publicProcedure
       .input(z.object({

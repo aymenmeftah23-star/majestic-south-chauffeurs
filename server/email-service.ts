@@ -1,239 +1,268 @@
 /**
- * Email Notification Service
- * Handles all email notifications for Majestic South Chauffeurs
+ * Email Service - Majestic South Chauffeurs
+ * Envoi d'emails réels via SMTP avec nodemailer
  */
+import nodemailer from 'nodemailer';
 
-export interface EmailNotification {
-  to: string;
-  subject: string;
-  template: string;
-  data: Record<string, any>;
+const FROM_NAME = 'Majestic South Chauffeurs';
+const FROM_EMAIL = process.env.SMTP_FROM || 'contact@mschauffeur.fr';
+const COMPANY_PHONE = '+33 6 95 61 89 98';
+const APP_URL = process.env.APP_URL || 'https://majestic-south-chauffeurs-production.up.railway.app';
+
+// Créer le transporteur SMTP
+function createTransporter() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false },
+  });
 }
 
-/**
- * Email templates for different events
- */
-export const EMAIL_TEMPLATES = {
-  // New demand received
-  NEW_DEMAND: {
-    subject: 'Nouvelle demande reçue - Majestic South Chauffeurs',
-    template: 'new-demand',
-    variables: ['clientName', 'demandType', 'origin', 'destination', 'date', 'demandId'],
-  },
+// Template HTML de base
+function baseTemplate(content: string): string {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body{font-family:'Helvetica Neue',Arial,sans-serif;background:#0a0a0a;margin:0;padding:20px;}
+    .wrap{max-width:600px;margin:0 auto;background:#111;border:1px solid #2a2a2a;border-radius:8px;overflow:hidden;}
+    .hdr{background:#0a0a0a;padding:28px;text-align:center;border-bottom:1px solid #2a2a2a;}
+    .logo{font-size:22px;font-weight:700;color:#d4af37;letter-spacing:2px;}
+    .sub{font-size:10px;color:#666;letter-spacing:4px;text-transform:uppercase;margin-top:4px;}
+    .body{padding:32px;color:#bbb;line-height:1.7;}
+    .body h2{color:#fff;font-size:20px;margin:0 0 16px;}
+    .box{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:20px;margin:20px 0;}
+    .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #222;}
+    .row:last-child{border-bottom:none;}
+    .lbl{color:#666;font-size:13px;}
+    .val{color:#fff;font-size:13px;font-weight:500;text-align:right;}
+    .price{color:#d4af37;font-size:32px;font-weight:700;text-align:center;padding:16px 0;}
+    .btn{display:inline-block;background:#d4af37;color:#000;padding:12px 28px;border-radius:4px;text-decoration:none;font-weight:700;font-size:14px;margin:16px 0;}
+    .ftr{background:#0a0a0a;padding:20px;text-align:center;border-top:1px solid #2a2a2a;}
+    .ftr p{color:#444;font-size:12px;margin:3px 0;}
+    .ftr a{color:#d4af37;text-decoration:none;}
+    .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(212,175,55,0.15);color:#d4af37;border:1px solid rgba(212,175,55,0.3);}
+    .warn{background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:6px;padding:14px;margin:16px 0;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr">
+      <div class="logo">♛ MAJESTIC SOUTH</div>
+      <div class="sub">Chauffeurs Privés</div>
+    </div>
+    <div class="body">${content}</div>
+    <div class="ftr">
+      <p><strong style="color:#777">Majestic South Chauffeurs</strong></p>
+      <p>📞 <a href="tel:${COMPANY_PHONE}">${COMPANY_PHONE}</a> &nbsp;|&nbsp; ✉️ <a href="mailto:${FROM_EMAIL}">${FROM_EMAIL}</a></p>
+      <p style="margin-top:12px;font-size:11px;color:#333">© ${new Date().getFullYear()} Majestic South Chauffeurs. Tous droits réservés.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
 
-  // Demand confirmed
-  DEMAND_CONFIRMED: {
-    subject: 'Votre demande a été confirmée',
-    template: 'demand-confirmed',
-    variables: ['clientName', 'chauffeurName', 'vehicleType', 'date', 'time', 'missionId'],
-  },
-
-  // Mission started
-  MISSION_STARTED: {
-    subject: 'Votre mission a commencé',
-    template: 'mission-started',
-    variables: ['clientName', 'chauffeurName', 'vehicleInfo', 'estimatedDuration', 'missionId'],
-  },
-
-  // Mission completed
-  MISSION_COMPLETED: {
-    subject: 'Votre mission est terminée',
-    template: 'mission-completed',
-    variables: ['clientName', 'totalPrice', 'distance', 'duration', 'missionId', 'invoiceId'],
-  },
-
-  // Payment received
-  PAYMENT_RECEIVED: {
-    subject: 'Paiement reçu - Majestic South Chauffeurs',
-    template: 'payment-received',
-    variables: ['clientName', 'amount', 'date', 'invoiceId', 'paymentMethod'],
-  },
-
-  // Invoice sent
-  INVOICE_SENT: {
-    subject: 'Votre facture est prête',
-    template: 'invoice-sent',
-    variables: ['clientName', 'invoiceNumber', 'amount', 'dueDate', 'invoiceId'],
-  },
-
-  // Chauffeur assigned
-  CHAUFFEUR_ASSIGNED: {
-    subject: 'Chauffeur assigné à votre mission',
-    template: 'chauffeur-assigned',
-    variables: ['clientName', 'chauffeurName', 'chauffeurPhone', 'vehicleInfo', 'eta', 'missionId'],
-  },
-
-  // Alert notification
-  ALERT_NOTIFICATION: {
-    subject: 'Alerte importante - Majestic South Chauffeurs',
-    template: 'alert',
-    variables: ['alertType', 'alertMessage', 'severity', 'actionRequired'],
-  },
-
-  // Review request
-  REVIEW_REQUEST: {
-    subject: 'Donnez votre avis sur votre mission',
-    template: 'review-request',
-    variables: ['clientName', 'chauffeurName', 'missionId', 'reviewLink'],
-  },
-
-  // Password reset
-  PASSWORD_RESET: {
-    subject: 'Réinitialiser votre mot de passe',
-    template: 'password-reset',
-    variables: ['userName', 'resetLink', 'expiryTime'],
-  },
-
-  // Welcome email
-  WELCOME: {
-    subject: 'Bienvenue chez Majestic South Chauffeurs',
-    template: 'welcome',
-    variables: ['userName', 'accountType', 'onboardingLink'],
-  },
-};
-
-/**
- * Send email notification
- */
-export async function sendEmailNotification(notification: EmailNotification): Promise<boolean> {
+// Envoi générique
+export async function sendEmail(to: string, subject: string, html: string, attachments?: any[]): Promise<boolean> {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.log(`[Email] SMTP non configuré - log: ${subject} → ${to}`);
+    return false;
+  }
   try {
-    // In production, integrate with email service (SendGrid, AWS SES, etc.)
-    console.log(`[Email] Sending to ${notification.to}`);
-    console.log(`[Email] Subject: ${notification.subject}`);
-    console.log(`[Email] Template: ${notification.template}`);
-    console.log(`[Email] Data:`, notification.data);
-
-    // Simulate email sending
+    await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to, subject, html,
+      ...(attachments ? { attachments } : {}),
+    });
+    console.log(`[Email] ✓ Envoyé à ${to}: ${subject}`);
     return true;
-  } catch (error) {
-    console.error('[Email] Failed to send:', error);
+  } catch (err) {
+    console.error(`[Email] ✗ Échec ${to}:`, err);
     return false;
   }
 }
 
-/**
- * Send new demand notification to admin
- */
-export async function notifyNewDemand(
-  adminEmail: string,
-  demand: {
-    id: number;
-    type: string;
-    origin: string;
-    destination: string;
-    date: string;
-    clientName: string;
-  }
-): Promise<boolean> {
-  return sendEmailNotification({
-    to: adminEmail,
-    subject: EMAIL_TEMPLATES.NEW_DEMAND.subject,
-    template: EMAIL_TEMPLATES.NEW_DEMAND.template,
-    data: {
-      clientName: demand.clientName,
-      demandType: demand.type,
-      origin: demand.origin,
-      destination: demand.destination,
-      date: demand.date,
-      demandId: demand.id,
-    },
-  });
+// Formater une date en français
+function fmtDate(d: Date | string, withTime = true): string {
+  const date = typeof d === 'string' ? new Date(d) : d;
+  return new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+  }).format(date);
 }
 
-/**
- * Send mission completed notification to client
- */
-export async function notifyMissionCompleted(
-  clientEmail: string,
-  mission: {
-    id: number;
-    clientName: string;
-    totalPrice: number;
-    distance: number;
-    duration: number;
-    invoiceId: string;
-  }
-): Promise<boolean> {
-  return sendEmailNotification({
-    to: clientEmail,
-    subject: EMAIL_TEMPLATES.MISSION_COMPLETED.subject,
-    template: EMAIL_TEMPLATES.MISSION_COMPLETED.template,
-    data: {
-      clientName: mission.clientName,
-      totalPrice: mission.totalPrice,
-      distance: mission.distance,
-      duration: mission.duration,
-      missionId: mission.id,
-      invoiceId: mission.invoiceId,
-    },
-  });
+// ============================================================
+// 1. Confirmation de réservation au client
+// ============================================================
+export async function sendBookingConfirmation(p: {
+  clientEmail: string; clientName: string; missionNumber: string;
+  origin: string; destination: string; date: Date | string;
+  passengers: number; chauffeurName?: string; vehicleModel?: string; price?: number;
+}) {
+  const html = baseTemplate(`
+    <h2>✅ Votre réservation est confirmée</h2>
+    <p>Bonjour <strong>${p.clientName}</strong>,</p>
+    <p>Nous avons bien enregistré votre réservation. Voici le récapitulatif :</p>
+    <div class="box">
+      <div class="row"><span class="lbl">N° de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
+      <div class="row"><span class="lbl">Date & heure</span><span class="val">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Départ</span><span class="val">📍 ${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
+      ${p.chauffeurName ? `<div class="row"><span class="lbl">Chauffeur</span><span class="val">👤 ${p.chauffeurName}</span></div>` : ''}
+      ${p.vehicleModel ? `<div class="row"><span class="lbl">Véhicule</span><span class="val">🚗 ${p.vehicleModel}</span></div>` : ''}
+      ${p.price ? `<div class="row"><span class="lbl">Tarif</span><span class="val" style="color:#d4af37;font-size:16px;font-weight:700">${p.price}€ TTC</span></div>` : ''}
+    </div>
+    <p>Pour toute modification ou annulation, contactez-nous au <strong>${COMPANY_PHONE}</strong>.</p>
+    <p>Nous vous souhaitons un excellent voyage.</p>
+    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+  `);
+  return sendEmail(p.clientEmail, `✅ Réservation confirmée - ${p.missionNumber}`, html);
 }
 
-/**
- * Send payment received notification
- */
-export async function notifyPaymentReceived(
-  clientEmail: string,
-  payment: {
-    amount: number;
-    date: string;
-    invoiceId: string;
-    paymentMethod: string;
-    clientName: string;
-  }
-): Promise<boolean> {
-  return sendEmailNotification({
-    to: clientEmail,
-    subject: EMAIL_TEMPLATES.PAYMENT_RECEIVED.subject,
-    template: EMAIL_TEMPLATES.PAYMENT_RECEIVED.template,
-    data: {
-      clientName: payment.clientName,
-      amount: payment.amount,
-      date: payment.date,
-      invoiceId: payment.invoiceId,
-      paymentMethod: payment.paymentMethod,
-    },
-  });
+// ============================================================
+// 2. Notification au chauffeur assigné
+// ============================================================
+export async function sendChauffeurAssignment(p: {
+  chauffeurEmail: string; chauffeurName: string; missionNumber: string;
+  clientName: string; origin: string; destination: string; date: Date | string;
+  passengers: number; vehicleModel?: string; specialInstructions?: string;
+}) {
+  const html = baseTemplate(`
+    <h2>🚗 Nouvelle mission assignée</h2>
+    <p>Bonjour <strong>${p.chauffeurName}</strong>,</p>
+    <p>Une nouvelle mission vous a été assignée :</p>
+    <div class="box">
+      <div class="row"><span class="lbl">N° de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
+      <div class="row"><span class="lbl">Client</span><span class="val">👤 ${p.clientName}</span></div>
+      <div class="row"><span class="lbl">Date & heure</span><span class="val" style="color:#d4af37;font-weight:700">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Prise en charge</span><span class="val">📍 ${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
+      ${p.vehicleModel ? `<div class="row"><span class="lbl">Véhicule assigné</span><span class="val">🚗 ${p.vehicleModel}</span></div>` : ''}
+    </div>
+    ${p.specialInstructions ? `<div class="warn"><p style="color:#d4af37;font-weight:600;margin:0 0 6px">⚠️ Instructions spéciales</p><p style="margin:0;color:#ccc">${p.specialInstructions}</p></div>` : ''}
+    <p>Pour toute question : <strong>${COMPANY_PHONE}</strong></p>
+    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+  `);
+  return sendEmail(p.chauffeurEmail, `🚗 Mission ${p.missionNumber} - ${p.clientName}`, html);
 }
 
-/**
- * Send chauffeur assigned notification
- */
-export async function notifyChauffeurAssigned(
-  clientEmail: string,
-  assignment: {
-    clientName: string;
-    chauffeurName: string;
-    chauffeurPhone: string;
-    vehicleInfo: string;
-    eta: string;
-    missionId: number;
-  }
-): Promise<boolean> {
-  return sendEmailNotification({
-    to: clientEmail,
-    subject: EMAIL_TEMPLATES.CHAUFFEUR_ASSIGNED.subject,
-    template: EMAIL_TEMPLATES.CHAUFFEUR_ASSIGNED.template,
-    data: assignment,
-  });
+// ============================================================
+// 3. Envoi de devis par email (avec PDF en pièce jointe)
+// ============================================================
+export async function sendQuoteEmail(p: {
+  clientEmail: string; clientName: string; quoteNumber: string;
+  origin: string; destination: string; date: Date | string;
+  passengers: number; priceHT: number; priceTTC: number;
+  validUntil: Date | string; notes?: string; pdfBuffer?: Buffer;
+}) {
+  const validStr = fmtDate(p.validUntil, false);
+  const html = baseTemplate(`
+    <h2>📋 Votre devis personnalisé</h2>
+    <p>Bonjour <strong>${p.clientName}</strong>,</p>
+    <p>Suite à votre demande, veuillez trouver votre devis :</p>
+    <div class="box">
+      <div class="row"><span class="lbl">N° de devis</span><span class="val"><span class="badge">${p.quoteNumber}</span></span></div>
+      <div class="row"><span class="lbl">Date de la prestation</span><span class="val">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Départ</span><span class="val">📍 ${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
+    </div>
+    <div class="box" style="text-align:center">
+      <p style="color:#666;font-size:12px;margin:0 0 4px">MONTANT TOTAL</p>
+      <div class="price">${p.priceTTC}€ TTC</div>
+      <p style="color:#444;font-size:12px;margin:0">dont ${p.priceHT}€ HT + TVA 20%</p>
+    </div>
+    ${p.notes ? `<p style="color:#666;font-size:13px;font-style:italic">Note : ${p.notes}</p>` : ''}
+    <p style="color:#666;font-size:13px">⏰ Devis valable jusqu'au <strong style="color:#fff">${validStr}</strong>.</p>
+    <p>Pour accepter ce devis : <strong>${COMPANY_PHONE}</strong> ou répondez à cet email.</p>
+    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+  `);
+
+  const attachments = p.pdfBuffer ? [{
+    filename: `devis-${p.quoteNumber}.pdf`,
+    content: p.pdfBuffer,
+    contentType: 'application/pdf',
+  }] : undefined;
+
+  return sendEmail(p.clientEmail, `📋 Devis ${p.quoteNumber} - Majestic South Chauffeurs`, html, attachments);
 }
 
-/**
- * Send review request notification
- */
-export async function notifyReviewRequest(
-  clientEmail: string,
-  review: {
-    clientName: string;
-    chauffeurName: string;
-    missionId: number;
-    reviewLink: string;
-  }
-): Promise<boolean> {
-  return sendEmailNotification({
-    to: clientEmail,
-    subject: EMAIL_TEMPLATES.REVIEW_REQUEST.subject,
-    template: EMAIL_TEMPLATES.REVIEW_REQUEST.template,
-    data: review,
-  });
+// ============================================================
+// 4. Rappel 24h avant la mission
+// ============================================================
+export async function sendMissionReminder(p: {
+  clientEmail: string; clientName: string; missionNumber: string;
+  origin: string; destination: string; date: Date | string;
+  chauffeurName?: string; chauffeurPhone?: string;
+  vehicleModel?: string; vehiclePlate?: string;
+}) {
+  const html = baseTemplate(`
+    <h2>⏰ Rappel : Votre mission demain</h2>
+    <p>Bonjour <strong>${p.clientName}</strong>,</p>
+    <p>Votre transfert est prévu <strong>demain</strong> :</p>
+    <div class="box">
+      <div class="row"><span class="lbl">N° de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
+      <div class="row"><span class="lbl">Heure de prise en charge</span><span class="val" style="color:#d4af37;font-weight:700;font-size:15px">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Lieu de prise en charge</span><span class="val">📍 ${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      ${p.chauffeurName ? `<div class="row"><span class="lbl">Votre chauffeur</span><span class="val">👤 ${p.chauffeurName}${p.chauffeurPhone ? ` — 📞 ${p.chauffeurPhone}` : ''}</span></div>` : ''}
+      ${p.vehicleModel ? `<div class="row"><span class="lbl">Véhicule</span><span class="val">🚗 ${p.vehicleModel}${p.vehiclePlate ? ` (${p.vehiclePlate})` : ''}</span></div>` : ''}
+    </div>
+    <p>Votre chauffeur sera présent <strong>5 minutes avant l'heure convenue</strong>.</p>
+    <p>Urgence : <strong>${COMPANY_PHONE}</strong></p>
+    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+  `);
+  return sendEmail(p.clientEmail, `⏰ Rappel : Votre transfert demain - ${p.missionNumber}`, html);
 }
+
+// ============================================================
+// 5. Notification nouvelle demande (pour l'admin)
+// ============================================================
+export async function sendNewDemandNotification(p: {
+  adminEmail: string; clientName: string; origin: string;
+  destination: string; date: Date | string; passengers: number; message?: string;
+}) {
+  const html = baseTemplate(`
+    <h2>🔔 Nouvelle demande de réservation</h2>
+    <p>Une nouvelle demande vient d'être soumise via le site web.</p>
+    <div class="box">
+      <div class="row"><span class="lbl">Client</span><span class="val">👤 ${p.clientName}</span></div>
+      <div class="row"><span class="lbl">Date souhaitée</span><span class="val">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Départ</span><span class="val">📍 ${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
+      ${p.message ? `<div class="row"><span class="lbl">Message</span><span class="val">${p.message}</span></div>` : ''}
+    </div>
+    <a href="${APP_URL}/demands" class="btn">Voir la demande →</a>
+    <p style="color:#666;font-size:13px">Connectez-vous au back-office pour traiter cette demande.</p>
+  `);
+  return sendEmail(p.adminEmail, `🔔 Nouvelle demande - ${p.clientName}`, html);
+}
+
+// Compatibilité avec l'ancien code
+export { sendNewDemandNotification as notifyNewDemand };
+export const EMAIL_TEMPLATES = {};
+export async function sendEmailNotification(n: any): Promise<boolean> {
+  console.log(`[Email] ${n.subject} → ${n.to}`);
+  return false;
+}
+export async function notifyMissionCompleted(email: string, m: any) { return false; }
+export async function notifyPaymentReceived(email: string, p: any) { return false; }
+export async function notifyChauffeurAssigned(email: string, a: any) { return false; }
+export async function notifyReviewRequest(email: string, r: any) { return false; }

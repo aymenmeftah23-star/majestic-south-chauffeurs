@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { InsertUser, users, clients, chauffeurs, vehicles, demands, missions, quotes, alerts } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -47,7 +48,9 @@ export const DEMO_ALERTS = [
 ];
 
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: any = null;
+let _pool: mysql.Pool | null = null;
+let _dbInitialized = false;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
@@ -59,13 +62,182 @@ export async function getDb() {
       return null;
     }
     try {
-      _db = drizzle(url);
+      // Créer un pool de connexions mysql2
+      _pool = mysql.createPool({
+        uri: url,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        connectTimeout: 10000,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+      });
+      // Tester la connexion
+      const conn = await _pool.getConnection();
+      conn.release();
+      _db = drizzle(_pool);
+      console.log('[Database] Connected to MySQL successfully');
+      // Créer les tables si elles n\'existent pas
+      if (!_dbInitialized) {
+        await initDatabase(_pool);
+        _dbInitialized = true;
+      }
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
+      _pool = null;
     }
   }
   return _db;
+}
+
+// Initialiser la base de données (créer les tables)
+async function initDatabase(pool: mysql.Pool) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS app_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(320) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        phone VARCHAR(20),
+        role ENUM('admin','gestionnaire','chauffeur','client') DEFAULT 'gestionnaire',
+        status ENUM('actif','inactif','suspendu') DEFAULT 'actif',
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(320),
+        phone VARCHAR(20) NOT NULL,
+        company VARCHAR(255),
+        type VARCHAR(100) DEFAULT 'particulier',
+        address TEXT,
+        preferences TEXT,
+        notes TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS chauffeurs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(320),
+        phone VARCHAR(20) NOT NULL,
+        licenseNumber VARCHAR(100),
+        languages VARCHAR(255),
+        zones TEXT,
+        status VARCHAR(50) DEFAULT 'disponible',
+        type VARCHAR(50) DEFAULT 'interne',
+        notes TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS vehicles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        brand VARCHAR(255) NOT NULL,
+        model VARCHAR(255) NOT NULL,
+        licensePlate VARCHAR(20) NOT NULL UNIQUE,
+        category VARCHAR(100) NOT NULL,
+        seats INT DEFAULT 4,
+        luggage INT DEFAULT 3,
+        color VARCHAR(100),
+        year INT,
+        mileage INT,
+        status VARCHAR(50) DEFAULT 'disponible',
+        nextMaintenance TIMESTAMP NULL,
+        notes TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS demands (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        clientId INT NOT NULL,
+        type VARCHAR(100) NOT NULL,
+        origin VARCHAR(255) NOT NULL,
+        destination VARCHAR(255) NOT NULL,
+        date TIMESTAMP NOT NULL,
+        passengers INT DEFAULT 1,
+        luggage INT DEFAULT 0,
+        vehicleType VARCHAR(100),
+        message TEXT,
+        status VARCHAR(50) DEFAULT 'nouvelle',
+        priority VARCHAR(50) DEFAULT 'normale',
+        source VARCHAR(100) DEFAULT 'site',
+        assignedTo INT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS quotes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        demandId INT NOT NULL,
+        number VARCHAR(50) NOT NULL UNIQUE,
+        price INT NOT NULL,
+        priceHT INT NOT NULL,
+        status VARCHAR(50) DEFAULT 'brouillon',
+        validUntil TIMESTAMP NULL,
+        notes TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS missions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        number VARCHAR(50) NOT NULL UNIQUE,
+        clientId INT NOT NULL,
+        chauffeurId INT,
+        vehicleId INT,
+        quoteId INT,
+        type VARCHAR(100) NOT NULL DEFAULT 'standard',
+        origin VARCHAR(255) NOT NULL,
+        destination VARCHAR(255) NOT NULL,
+        date TIMESTAMP NOT NULL,
+        passengers INT DEFAULT 1,
+        luggage INT DEFAULT 0,
+        price INT,
+        priceHT INT,
+        paymentStatus VARCHAR(50) DEFAULT 'non_paye',
+        paymentMethod VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'a_confirmer',
+        notes TEXT,
+        specialInstructions TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS alerts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        type VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT,
+        priority VARCHAR(50) DEFAULT 'normale',
+        relatedEntity VARCHAR(100),
+        relatedId INT,
+        vehicleId INT,
+        chauffeurId INT,
+        status VARCHAR(50) DEFAULT 'active',
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[Database] Tables initialized successfully');
+  } catch (error) {
+    console.error('[Database] Failed to initialize tables:', error);
+  } finally {
+    conn.release();
+  }
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

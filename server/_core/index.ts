@@ -50,6 +50,20 @@ async function startServer() {
     res.json({ status: "ok", service: "Majestic South Chauffeurs", timestamp: new Date().toISOString() });
   });
 
+  // Real-time notifications SSE
+  app.get("/api/notifications/stream", (req, res) => {
+    const userIdStr = req.query.userId as string;
+    const userId = userIdStr ? parseInt(userIdStr, 10) : 1; // Default to admin if not specified
+    
+    // Importer dynamiquement pour éviter les problèmes de cycle
+    import("../notification-service").then(({ addClient }) => {
+      addClient(userId, res);
+    }).catch(err => {
+      console.error("Failed to load notification service", err);
+      res.status(500).end();
+    });
+  });
+
   // PDF generation routes
   app.get("/api/pdf/mission/:id", async (req, res) => {
     try {
