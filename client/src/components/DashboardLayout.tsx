@@ -9,6 +9,7 @@ import {
   UserCheck, CreditCard, History, Shield, MessageSquare,
   Star, Tag, Gift, Webhook, Code, ClipboardList, UserCog
 } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 
 const GOLD = "#C9A84C";
 
@@ -212,13 +213,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
 
-            {/* Notifications */}
-            <Link href="/alerts">
-              <button className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-100 dark:bg-white/10 rounded-lg transition-all">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full text-white text-[9px] flex items-center justify-center font-bold">1</span>
-              </button>
-            </Link>
+            {/* Notifications temps réel */}
+            <NotificationBell userId={currentUser?.id} />
 
             {/* User menu */}
             <div className="relative">

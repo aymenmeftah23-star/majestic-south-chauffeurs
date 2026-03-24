@@ -48,6 +48,8 @@ import BookingForm from "./pages/BookingForm";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import Members from "./pages/Members";
+import DriverPortal from "./pages/DriverPortal";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 function Router() {
   return (
@@ -114,6 +116,8 @@ function Router() {
       <Route path={"/webhooks"} component={Webhooks} />
       <Route path={"/bonuses"} component={Bonuses} />
       <Route path={"/members"} component={Members} />
+      <Route path={"/driver"} component={DriverPortal} />
+      <Route path={"/payment-success"} component={PaymentSuccess} />
 
       {/* Legacy routes (backward compat) */}
       <Route path={"/create-mission"} component={CreateMission} />

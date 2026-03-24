@@ -93,7 +93,7 @@ export default function CreateVehicle() {
                       <SelectItem value="van">{t('vehicles.van')}</SelectItem>
                       <SelectItem value="suv">SUV Premium</SelectItem>
                       <SelectItem value="minibus">Minibus (8-16 places)</SelectItem>
-                      <SelectItem value="electrique">⚡ Électrique / Hybride</SelectItem>
+                      <SelectItem value="electrique">Électrique / Hybride</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

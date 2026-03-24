@@ -8,6 +8,10 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { generateMissionPDF, generateQuotePDF, generateInvoicePDF } from "../pdf-service";
+import { startCronService } from "../cron-service";
+import { createCheckoutSession, constructWebhookEvent, isStripeEnabled } from "../stripe-service";
+import { generateICalContent } from "../ical-service";
+import { ENV } from "./env";
 import { DEMO_MISSIONS, DEMO_CLIENTS, DEMO_CHAUFFEURS, DEMO_VEHICLES, DEMO_QUOTES } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -126,12 +130,96 @@ async function startServer() {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // Route iCal - Export calendrier chauffeur
+  app.get("/api/calendar/:chauffeurId.ics", async (req, res) => {
+    try {
+      const chauffeurId = parseInt(req.params.chauffeurId);
+      const chauffeur = DEMO_CHAUFFEURS.find(c => c.id === chauffeurId) || DEMO_CHAUFFEURS[0];
+      const missions = DEMO_MISSIONS.filter(m => m.chauffeurId === chauffeurId);
+      const icalMissions = missions.map(m => ({
+        id: m.id,
+        number: String(m.id),
+        origin: m.origin,
+        destination: m.destination,
+        date: m.date,
+        status: m.status,
+        notes: m.notes,
+        clientName: DEMO_CLIENTS.find(c => c.id === m.clientId)?.name,
+        vehicleModel: DEMO_VEHICLES.find(v => v.id === m.vehicleId)?.model,
+        passengers: undefined,
+      }));
+      const content = generateICalContent(icalMissions, chauffeur?.name);
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="calendrier-${chauffeurId}.ics"`);
+      res.send(content);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Route iCal global (toutes les missions)
+  app.get("/api/calendar/all.ics", async (req, res) => {
+    try {
+      const icalMissions = DEMO_MISSIONS.map(m => ({
+        id: m.id,
+        number: String(m.id),
+        origin: m.origin,
+        destination: m.destination,
+        date: m.date,
+        status: m.status,
+        notes: m.notes,
+        clientName: DEMO_CLIENTS.find(c => c.id === m.clientId)?.name,
+        vehicleModel: DEMO_VEHICLES.find(v => v.id === m.vehicleId)?.model,
+        passengers: undefined,
+      }));
+      const content = generateICalContent(icalMissions, 'Toutes les missions');
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="toutes-missions.ics"');
+      res.send(content);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Routes Stripe
+  app.post("/api/stripe/create-checkout", async (req, res) => {
+    try {
+      if (!isStripeEnabled()) {
+        return res.status(503).json({ error: "Stripe non configure" });
+      }
+      const { missionId, missionNumber, amount, clientEmail, clientName, origin, destination, date, type } = req.body;
+      const baseUrl = ENV.APP_URL;
+      const session = await createCheckoutSession({
+        missionId, missionNumber, amount, clientEmail, clientName, origin, destination, date,
+        type: type || 'acompte',
+        successUrl: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${baseUrl}/missions/${missionId}`,
+      });
+      if (!session) return res.status(500).json({ error: "Erreur creation session" });
+      res.json(session);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Webhook Stripe (doit etre avant express.json pour avoir le raw body)
+  app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+    const event = constructWebhookEvent(req.body, sig, ENV.STRIPE_WEBHOOK_SECRET);
+    if (!event) return res.status(400).send('Webhook Error');
+    
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as any;
+      const missionId = parseInt(session.metadata?.missionId || '0');
+      console.log(`[Stripe] Paiement confirme pour la mission ${missionId}`);
+      // TODO: Mettre a jour le statut de paiement en DB
+    }
+    res.json({ received: true });
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
+
+  // Démarrer le service CRON
+  startCronService();
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

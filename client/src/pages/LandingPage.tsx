@@ -30,10 +30,10 @@ export default function LandingPage() {
   ];
 
   const vehicles = [
-    { name: "Mercedes Classe V", category: "Van Premium", capacity: "7 passagers", img: "🚐" },
-    { name: "Mercedes Classe E", category: "Berline Luxe", capacity: "3 passagers", img: "🚗" },
-    { name: "Mercedes Classe S", category: "Berline Prestige", capacity: "3 passagers", img: "🚗" },
-    { name: "Tesla Model Y", category: "SUV Électrique", capacity: "4 passagers", img: "🚙" },
+    { name: "Mercedes Classe V", category: "Van Premium", capacity: "7 passagers" },
+    { name: "Mercedes Classe E", category: "Berline Luxe", capacity: "3 passagers" },
+    { name: "Mercedes Classe S", category: "Berline Prestige", capacity: "3 passagers" },
+    { name: "Tesla Model Y", category: "SUV Électrique", capacity: "4 passagers" },
   ];
 
   return (
@@ -211,8 +211,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {vehicles.map((v) => (
               <div key={v.name} className="rounded-2xl border border-amber-900/30 bg-gradient-to-b from-[#1a1400] to-[#0d0b07] overflow-hidden hover:border-amber-600/50 transition-all">
-                <div className="h-40 flex items-center justify-center text-7xl bg-gradient-to-b from-[#1a1400] to-[#0d0b07]">
-                  {v.img}
+                <div className="h-40 flex items-center justify-center bg-gradient-to-b from-[#1a1400] to-[#0d0b07]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5"/><circle cx="16" cy="17" r="2"/><circle cx="9" cy="17" r="2"/><path d="M14 17H11M3 9h11"/></svg>
                 </div>
                 <div className="p-4">
                   <div className="text-xs text-amber-400 mb-1">{v.category}</div>

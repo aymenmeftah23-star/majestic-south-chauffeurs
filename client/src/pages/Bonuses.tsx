@@ -233,7 +233,7 @@ export default function Bonuses() {
                       <div>
                         <h3 className="font-semibold">{bonus.name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {bonus.missions} missions • Note: {bonus.rating}★
+                          {bonus.missions} missions • Note: {bonus.rating}/5
                         </p>
                       </div>
                       <div className="text-right">

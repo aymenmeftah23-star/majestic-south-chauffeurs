@@ -93,7 +93,7 @@ export default function Reviews() {
                     const percentage = (count / reviews.length) * 100;
                     return (
                       <div key={rating} className="flex items-center gap-2">
-                        <span className="text-sm w-8">{rating}★</span>
+                        <span className="text-sm w-8">{rating}/5</span>
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full bg-yellow-400"

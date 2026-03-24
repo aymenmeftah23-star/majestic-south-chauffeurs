@@ -85,15 +85,15 @@ export default function CreateMission() {
                 <Select value={formData.type} onValueChange={(v) => setFormData(p => ({ ...p, type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="airport">✈️ {t('demands.airport')}</SelectItem>
-                    <SelectItem value="train">🚄 Transfert Gare / Train</SelectItem>
-                    <SelectItem value="hotel">🏨 Transfert Hôtel</SelectItem>
-                    <SelectItem value="cruise">🚢 Transfert Port / Croisière</SelectItem>
+                    <SelectItem value="airport">{t('demands.airport')}</SelectItem>
+                    <SelectItem value="train">Transfert Gare / Train</SelectItem>
+                    <SelectItem value="hotel">Transfert Hôtel</SelectItem>
+                    <SelectItem value="cruise">Transfert Port / Croisière</SelectItem>
                     <SelectItem value="business">{t('demands.business')}</SelectItem>
                     <SelectItem value="event">{t('demands.event')}</SelectItem>
                     <SelectItem value="tour">{t('demands.tour')}</SelectItem>
-                    <SelectItem value="disposal">🕐 Mise à disposition</SelectItem>
-                    <SelectItem value="intercity">🗺️ Transfert inter-villes</SelectItem>
+                    <SelectItem value="disposal">Mise à disposition</SelectItem>
+                    <SelectItem value="intercity">Transfert inter-villes</SelectItem>
                     <SelectItem value="other">{t('demands.other')}</SelectItem>
                   </SelectContent>
                 </Select>

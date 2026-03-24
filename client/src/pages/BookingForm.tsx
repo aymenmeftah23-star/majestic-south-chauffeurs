@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { MapPin, Users, CheckCircle, ChevronRight, ChevronLeft, Car, Calendar, Clock, Phone, Mail, User, CreditCard, Shield, Star } from "lucide-react";
+import { MapPin, Users, CheckCircle, ChevronRight, ChevronLeft, Car, Calendar, Clock, Phone, Mail, User, CreditCard, Shield, Star, Plane, Briefcase, Timer, Map } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 const GOLD = "#C9A84C";
@@ -33,19 +33,19 @@ interface BookingData {
 }
 
 const SERVICE_TYPES = [
-  { value: "airport", label: "Transfert Aéroport", icon: "✈️", desc: "MRS, NCE, TLN, Montpellier..." },
-  { value: "business", label: "Voyage d'Affaires", icon: "💼", desc: "Réunions, conférences" },
-  { value: "event", label: "Événement Privé", icon: "🎉", desc: "Mariage, gala, soirée" },
-  { value: "disposal", label: "Mise à Disposition", icon: "⏰", desc: "À l'heure ou à la journée" },
-  { value: "tourism", label: "Tourisme & Excursion", icon: "🗺️", desc: "Visites, circuits" },
-  { value: "other", label: "Autre", icon: "🚗", desc: "Toute autre demande" },
+  { value: "airport", label: "Transfert Aéroport", Icon: Plane, desc: "MRS, NCE, TLN, Montpellier..." },
+  { value: "business", label: "Voyage d'Affaires", Icon: Briefcase, desc: "Réunions, conférences" },
+  { value: "event", label: "Événement Privé", Icon: Star, desc: "Mariage, gala, soirée" },
+  { value: "disposal", label: "Mise à Disposition", Icon: Timer, desc: "À l'heure ou à la journée" },
+  { value: "tourism", label: "Tourisme & Excursion", Icon: Map, desc: "Visites, circuits" },
+  { value: "other", label: "Autre", Icon: Car, desc: "Toute autre demande" },
 ];
 
 const VEHICLE_TYPES = [
-  { value: "berline", label: "Berline Luxe", icon: "🚗", capacity: "1-3 passagers", example: "Mercedes Classe E / BMW Série 5", price: "À partir de 80€" },
-  { value: "van", label: "Van Premium", icon: "🚐", capacity: "1-7 passagers", example: "Mercedes Vito / V-Class", price: "À partir de 120€" },
-  { value: "suv", label: "SUV Prestige", icon: "🚙", capacity: "1-4 passagers", example: "BMW X5 / Mercedes GLE", price: "À partir de 100€" },
-  { value: "minibus", label: "Minibus VIP", icon: "🚌", capacity: "8-16 passagers", example: "Mercedes Sprinter", price: "À partir de 180€" },
+  { value: "berline", label: "Berline Luxe", capacity: "1-3 passagers", example: "Mercedes Classe E / BMW Série 5", price: "À partir de 80€" },
+  { value: "van", label: "Van Premium", capacity: "1-7 passagers", example: "Mercedes Vito / V-Class", price: "À partir de 120€" },
+  { value: "suv", label: "SUV Prestige", capacity: "1-4 passagers", example: "BMW X5 / Mercedes GLE", price: "À partir de 100€" },
+  { value: "minibus", label: "Minibus VIP", capacity: "8-16 passagers", example: "Mercedes Sprinter", price: "À partir de 180€" },
 ];
 
 export default function BookingForm() {
@@ -67,6 +67,17 @@ export default function BookingForm() {
   const update = (field: keyof BookingData, value: any) => setData(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = () => {
+    const message = [
+      data.firstName || data.lastName ? `Client: ${data.firstName} ${data.lastName}`.trim() : "",
+      data.email ? `Email: ${data.email}` : "",
+      data.phone ? `Tel: ${data.phone}` : "",
+      data.flightNumber ? `Vol: ${data.flightNumber}` : "",
+      data.specialRequests ? `Demandes: ${data.specialRequests}` : "",
+      `Vehicule souhaite: ${data.vehicleType}`,
+      `Bagages: ${data.luggage}`,
+      data.isRoundTrip && data.returnDate ? `Retour: ${data.returnDate} a ${data.returnTime}` : "",
+    ].filter(Boolean).join(" | ");
+
     createDemand.mutate({
       clientId: 1,
       origin: data.origin,
@@ -74,12 +85,7 @@ export default function BookingForm() {
       date: new Date(data.date + "T" + (data.time || "12:00")).toISOString(),
       passengers: data.passengers,
       type: data.serviceType || 'transfer',
-      message: [
-        data.flightNumber ? `Vol: ${data.flightNumber}` : "",
-        data.specialRequests ? `Demandes: ${data.specialRequests}` : "",
-        `Véhicule souhaité: ${data.vehicleType}`,
-        `Bagages: ${data.luggage}`,
-      ].filter(Boolean).join(" | "),
+      message,
     });
   };
 
@@ -156,7 +162,7 @@ export default function BookingForm() {
                 {SERVICE_TYPES.map((st) => (
                   <button key={st.value} onClick={() => update("serviceType", st.value)}
                     className={"p-3 rounded-xl border text-left transition-all " + (data.serviceType === st.value ? "border-[#C9A84C] bg-[#C9A84C]/10" : "border-white/10 bg-white/5 hover:border-white/20")}>
-                    <div className="text-xl mb-1">{st.icon}</div>
+                    <st.Icon className="h-5 w-5 mb-1" style={{ color: GOLD }} />
                     <div className={"text-xs font-semibold " + (data.serviceType === st.value ? "text-[#C9A84C]" : "text-white")}>{st.label}</div>
                     <div className="text-xs text-gray-500 mt-0.5">{st.desc}</div>
                   </button>
@@ -319,7 +325,7 @@ export default function BookingForm() {
                 {VEHICLE_TYPES.map((vt) => (
                   <button key={vt.value} onClick={() => update("vehicleType", vt.value)}
                     className={"w-full p-4 rounded-xl border text-left transition-all flex items-center gap-4 " + (data.vehicleType === vt.value ? "border-[#C9A84C] bg-[#C9A84C]/10" : "border-white/10 bg-white/5 hover:border-white/20")}>
-                    <span className="text-2xl">{vt.icon}</span>
+                    <Car className="h-6 w-6 flex-shrink-0" style={{ color: GOLD }} />
                     <div className="flex-1">
                       <div className={"font-semibold text-sm " + (data.vehicleType === vt.value ? "text-[#C9A84C]" : "text-white")}>{vt.label}</div>
                       <div className="text-xs text-gray-400">{vt.example} · {vt.capacity}</div>

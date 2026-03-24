@@ -80,13 +80,13 @@ export default function CreateClient() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="particulier">{t('clients.particulier')}</SelectItem>
-                      <SelectItem value="vip">⭐ VIP</SelectItem>
+                      <SelectItem value="vip">VIP</SelectItem>
                       <SelectItem value="business">{t('clients.business')}</SelectItem>
-                      <SelectItem value="hotel">🏨 Hôtel / Resort</SelectItem>
-                      <SelectItem value="agence">💼 Agence de voyage</SelectItem>
-                      <SelectItem value="partenaire">🤝 Partenaire</SelectItem>
-                      <SelectItem value="corporate">🏢 Corporate / Grand compte</SelectItem>
-                      <SelectItem value="croisiere">🚢 Croisière / Yacht</SelectItem>
+                      <SelectItem value="hotel">Hôtel / Resort</SelectItem>
+                      <SelectItem value="agence">Agence de voyage</SelectItem>
+                      <SelectItem value="partenaire">Partenaire</SelectItem>
+                      <SelectItem value="corporate">Corporate / Grand compte</SelectItem>
+                      <SelectItem value="croisiere">Croisière / Yacht</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

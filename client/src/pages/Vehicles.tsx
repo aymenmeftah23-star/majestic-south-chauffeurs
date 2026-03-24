@@ -13,8 +13,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
   unavailable:  { label: "Indisponible", color: "text-red-600 dark:text-red-400",      dot: "bg-red-500" },
 };
 
-const TYPE_ICONS: Record<string, string> = {
-  berline: "🚗", van: "🚐", suv: "🚙", minibus: "🚌", limousine: "🏎️", autre: "🚘",
+const TYPE_LABELS: Record<string, string> = {
+  berline: "Berline", van: "Van", suv: "SUV", minibus: "Minibus", limousine: "Limousine", autre: "Autre",
 };
 
 export default function Vehicles() {
@@ -102,12 +102,12 @@ export default function Vehicles() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginated.map((v: any) => {
               const sc = STATUS_CONFIG[normalizeStatus(v.status)] ?? STATUS_CONFIG.available;
-              const typeIcon = TYPE_ICONS[v.type?.toLowerCase()] ?? "🚗";
+              const typeLabel = TYPE_LABELS[v.type?.toLowerCase()] ?? (v.type ?? "Véhicule");
               return (
                 <div key={v.id} className="bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-5 hover:shadow-lg dark:hover:shadow-black/20 hover:border-[#C9A84C]/30 transition-all group">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-gray-100 dark:bg-white/10 flex-shrink-0">{typeIcon}</div>
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/10 flex-shrink-0"><Car className="h-5 w-5 text-gray-500 dark:text-gray-400" /></div>
                       <div>
                         <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{v.brand} {v.model}</h3>
                         <div className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5 bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded inline-block">{v.licensePlate ?? "—"}</div>

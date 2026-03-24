@@ -61,14 +61,14 @@ function baseTemplate(content: string): string {
 <body>
   <div class="wrap">
     <div class="hdr">
-      <div class="logo">♛ MAJESTIC SOUTH</div>
-      <div class="sub">Chauffeurs Privés</div>
+      <div class="logo">MAJESTIC SOUTH</div>
+      <div class="sub">Chauffeurs Prives</div>
     </div>
     <div class="body">${content}</div>
     <div class="ftr">
       <p><strong style="color:#777">Majestic South Chauffeurs</strong></p>
-      <p>📞 <a href="tel:${COMPANY_PHONE}">${COMPANY_PHONE}</a> &nbsp;|&nbsp; ✉️ <a href="mailto:${FROM_EMAIL}">${FROM_EMAIL}</a></p>
-      <p style="margin-top:12px;font-size:11px;color:#333">© ${new Date().getFullYear()} Majestic South Chauffeurs. Tous droits réservés.</p>
+      <p>Tel. <a href="tel:${COMPANY_PHONE}">${COMPANY_PHONE}</a> &nbsp;|&nbsp; <a href="mailto:${FROM_EMAIL}">${FROM_EMAIL}</a></p>
+      <p style="margin-top:12px;font-size:11px;color:#333">&copy; ${new Date().getFullYear()} Majestic South Chauffeurs. Tous droits reserves.</p>
     </div>
   </div>
 </body>
@@ -79,7 +79,7 @@ function baseTemplate(content: string): string {
 export async function sendEmail(to: string, subject: string, html: string, attachments?: any[]): Promise<boolean> {
   const transporter = createTransporter();
   if (!transporter) {
-    console.log(`[Email] SMTP non configuré - log: ${subject} → ${to}`);
+    console.log(`[Email] SMTP non configure - log: ${subject} -> ${to}`);
     return false;
   }
   try {
@@ -88,10 +88,10 @@ export async function sendEmail(to: string, subject: string, html: string, attac
       to, subject, html,
       ...(attachments ? { attachments } : {}),
     });
-    console.log(`[Email] ✓ Envoyé à ${to}: ${subject}`);
+    console.log(`[Email] Envoye a ${to}: ${subject}`);
     return true;
   } catch (err) {
-    console.error(`[Email] ✗ Échec ${to}:`, err);
+    console.error(`[Email] Echec ${to}:`, err);
     return false;
   }
 }
@@ -114,24 +114,24 @@ export async function sendBookingConfirmation(p: {
   passengers: number; chauffeurName?: string; vehicleModel?: string; price?: number;
 }) {
   const html = baseTemplate(`
-    <h2>✅ Votre réservation est confirmée</h2>
+    <h2>Reservation confirmee</h2>
     <p>Bonjour <strong>${p.clientName}</strong>,</p>
-    <p>Nous avons bien enregistré votre réservation. Voici le récapitulatif :</p>
+    <p>Nous avons bien enregistre votre reservation. Voici le recapitulatif :</p>
     <div class="box">
-      <div class="row"><span class="lbl">N° de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
-      <div class="row"><span class="lbl">Date & heure</span><span class="val">${fmtDate(p.date)}</span></div>
-      <div class="row"><span class="lbl">Départ</span><span class="val">📍 ${p.origin}</span></div>
-      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">N&deg; de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
+      <div class="row"><span class="lbl">Date &amp; heure</span><span class="val">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Depart</span><span class="val">${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">${p.destination}</span></div>
       <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
-      ${p.chauffeurName ? `<div class="row"><span class="lbl">Chauffeur</span><span class="val">👤 ${p.chauffeurName}</span></div>` : ''}
-      ${p.vehicleModel ? `<div class="row"><span class="lbl">Véhicule</span><span class="val">🚗 ${p.vehicleModel}</span></div>` : ''}
-      ${p.price ? `<div class="row"><span class="lbl">Tarif</span><span class="val" style="color:#d4af37;font-size:16px;font-weight:700">${p.price}€ TTC</span></div>` : ''}
+      ${p.chauffeurName ? `<div class="row"><span class="lbl">Chauffeur</span><span class="val">${p.chauffeurName}</span></div>` : ''}
+      ${p.vehicleModel ? `<div class="row"><span class="lbl">Vehicule</span><span class="val">${p.vehicleModel}</span></div>` : ''}
+      ${p.price ? `<div class="row"><span class="lbl">Tarif</span><span class="val" style="color:#d4af37;font-size:16px;font-weight:700">${p.price}&euro; TTC</span></div>` : ''}
     </div>
     <p>Pour toute modification ou annulation, contactez-nous au <strong>${COMPANY_PHONE}</strong>.</p>
     <p>Nous vous souhaitons un excellent voyage.</p>
-    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+    <p style="color:#666;font-size:13px">L'equipe Majestic South Chauffeurs</p>
   `);
-  return sendEmail(p.clientEmail, `✅ Réservation confirmée - ${p.missionNumber}`, html);
+  return sendEmail(p.clientEmail, `Reservation confirmee - ${p.missionNumber}`, html);
 }
 
 // ============================================================
@@ -143,23 +143,23 @@ export async function sendChauffeurAssignment(p: {
   passengers: number; vehicleModel?: string; specialInstructions?: string;
 }) {
   const html = baseTemplate(`
-    <h2>🚗 Nouvelle mission assignée</h2>
+    <h2>Nouvelle mission assignee</h2>
     <p>Bonjour <strong>${p.chauffeurName}</strong>,</p>
-    <p>Une nouvelle mission vous a été assignée :</p>
+    <p>Une nouvelle mission vous a ete assignee :</p>
     <div class="box">
-      <div class="row"><span class="lbl">N° de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
-      <div class="row"><span class="lbl">Client</span><span class="val">👤 ${p.clientName}</span></div>
-      <div class="row"><span class="lbl">Date & heure</span><span class="val" style="color:#d4af37;font-weight:700">${fmtDate(p.date)}</span></div>
-      <div class="row"><span class="lbl">Prise en charge</span><span class="val">📍 ${p.origin}</span></div>
-      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">N&deg; de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
+      <div class="row"><span class="lbl">Client</span><span class="val">${p.clientName}</span></div>
+      <div class="row"><span class="lbl">Date &amp; heure</span><span class="val" style="color:#d4af37;font-weight:700">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Prise en charge</span><span class="val">${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">${p.destination}</span></div>
       <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
-      ${p.vehicleModel ? `<div class="row"><span class="lbl">Véhicule assigné</span><span class="val">🚗 ${p.vehicleModel}</span></div>` : ''}
+      ${p.vehicleModel ? `<div class="row"><span class="lbl">Vehicule assigne</span><span class="val">${p.vehicleModel}</span></div>` : ''}
     </div>
-    ${p.specialInstructions ? `<div class="warn"><p style="color:#d4af37;font-weight:600;margin:0 0 6px">⚠️ Instructions spéciales</p><p style="margin:0;color:#ccc">${p.specialInstructions}</p></div>` : ''}
+    ${p.specialInstructions ? `<div class="warn"><p style="color:#d4af37;font-weight:600;margin:0 0 6px">Instructions speciales</p><p style="margin:0;color:#ccc">${p.specialInstructions}</p></div>` : ''}
     <p>Pour toute question : <strong>${COMPANY_PHONE}</strong></p>
-    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+    <p style="color:#666;font-size:13px">L'equipe Majestic South Chauffeurs</p>
   `);
-  return sendEmail(p.chauffeurEmail, `🚗 Mission ${p.missionNumber} - ${p.clientName}`, html);
+  return sendEmail(p.chauffeurEmail, `Mission ${p.missionNumber} - ${p.clientName}`, html);
 }
 
 // ============================================================
@@ -173,25 +173,25 @@ export async function sendQuoteEmail(p: {
 }) {
   const validStr = fmtDate(p.validUntil, false);
   const html = baseTemplate(`
-    <h2>📋 Votre devis personnalisé</h2>
+    <h2>Votre devis personnalise</h2>
     <p>Bonjour <strong>${p.clientName}</strong>,</p>
-    <p>Suite à votre demande, veuillez trouver votre devis :</p>
+    <p>Suite a votre demande, veuillez trouver votre devis :</p>
     <div class="box">
-      <div class="row"><span class="lbl">N° de devis</span><span class="val"><span class="badge">${p.quoteNumber}</span></span></div>
+      <div class="row"><span class="lbl">N&deg; de devis</span><span class="val"><span class="badge">${p.quoteNumber}</span></span></div>
       <div class="row"><span class="lbl">Date de la prestation</span><span class="val">${fmtDate(p.date)}</span></div>
-      <div class="row"><span class="lbl">Départ</span><span class="val">📍 ${p.origin}</span></div>
-      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">Depart</span><span class="val">${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">${p.destination}</span></div>
       <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
     </div>
     <div class="box" style="text-align:center">
       <p style="color:#666;font-size:12px;margin:0 0 4px">MONTANT TOTAL</p>
-      <div class="price">${p.priceTTC}€ TTC</div>
-      <p style="color:#444;font-size:12px;margin:0">dont ${p.priceHT}€ HT + TVA 20%</p>
+      <div class="price">${p.priceTTC}&euro; TTC</div>
+      <p style="color:#444;font-size:12px;margin:0">dont ${p.priceHT}&euro; HT + TVA 20%</p>
     </div>
     ${p.notes ? `<p style="color:#666;font-size:13px;font-style:italic">Note : ${p.notes}</p>` : ''}
-    <p style="color:#666;font-size:13px">⏰ Devis valable jusqu'au <strong style="color:#fff">${validStr}</strong>.</p>
-    <p>Pour accepter ce devis : <strong>${COMPANY_PHONE}</strong> ou répondez à cet email.</p>
-    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+    <p style="color:#666;font-size:13px">Devis valable jusqu'au <strong style="color:#fff">${validStr}</strong>.</p>
+    <p>Pour accepter ce devis : <strong>${COMPANY_PHONE}</strong> ou repondez a cet email.</p>
+    <p style="color:#666;font-size:13px">L'equipe Majestic South Chauffeurs</p>
   `);
 
   const attachments = p.pdfBuffer ? [{
@@ -200,7 +200,7 @@ export async function sendQuoteEmail(p: {
     contentType: 'application/pdf',
   }] : undefined;
 
-  return sendEmail(p.clientEmail, `📋 Devis ${p.quoteNumber} - Majestic South Chauffeurs`, html, attachments);
+  return sendEmail(p.clientEmail, `Devis ${p.quoteNumber} - Majestic South Chauffeurs`, html, attachments);
 }
 
 // ============================================================
@@ -213,22 +213,22 @@ export async function sendMissionReminder(p: {
   vehicleModel?: string; vehiclePlate?: string;
 }) {
   const html = baseTemplate(`
-    <h2>⏰ Rappel : Votre mission demain</h2>
+    <h2>Rappel : Votre mission demain</h2>
     <p>Bonjour <strong>${p.clientName}</strong>,</p>
-    <p>Votre transfert est prévu <strong>demain</strong> :</p>
+    <p>Votre transfert est prevu <strong>demain</strong> :</p>
     <div class="box">
-      <div class="row"><span class="lbl">N° de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
+      <div class="row"><span class="lbl">N&deg; de mission</span><span class="val"><span class="badge">${p.missionNumber}</span></span></div>
       <div class="row"><span class="lbl">Heure de prise en charge</span><span class="val" style="color:#d4af37;font-weight:700;font-size:15px">${fmtDate(p.date)}</span></div>
-      <div class="row"><span class="lbl">Lieu de prise en charge</span><span class="val">📍 ${p.origin}</span></div>
-      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
-      ${p.chauffeurName ? `<div class="row"><span class="lbl">Votre chauffeur</span><span class="val">👤 ${p.chauffeurName}${p.chauffeurPhone ? ` — 📞 ${p.chauffeurPhone}` : ''}</span></div>` : ''}
-      ${p.vehicleModel ? `<div class="row"><span class="lbl">Véhicule</span><span class="val">🚗 ${p.vehicleModel}${p.vehiclePlate ? ` (${p.vehiclePlate})` : ''}</span></div>` : ''}
+      <div class="row"><span class="lbl">Lieu de prise en charge</span><span class="val">${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">${p.destination}</span></div>
+      ${p.chauffeurName ? `<div class="row"><span class="lbl">Votre chauffeur</span><span class="val">${p.chauffeurName}${p.chauffeurPhone ? ` &mdash; Tel. ${p.chauffeurPhone}` : ''}</span></div>` : ''}
+      ${p.vehicleModel ? `<div class="row"><span class="lbl">Vehicule</span><span class="val">${p.vehicleModel}${p.vehiclePlate ? ` (${p.vehiclePlate})` : ''}</span></div>` : ''}
     </div>
-    <p>Votre chauffeur sera présent <strong>5 minutes avant l'heure convenue</strong>.</p>
+    <p>Votre chauffeur sera present <strong>5 minutes avant l'heure convenue</strong>.</p>
     <p>Urgence : <strong>${COMPANY_PHONE}</strong></p>
-    <p style="color:#666;font-size:13px">L'équipe Majestic South Chauffeurs</p>
+    <p style="color:#666;font-size:13px">L'equipe Majestic South Chauffeurs</p>
   `);
-  return sendEmail(p.clientEmail, `⏰ Rappel : Votre transfert demain - ${p.missionNumber}`, html);
+  return sendEmail(p.clientEmail, `Rappel : Votre transfert demain - ${p.missionNumber}`, html);
 }
 
 // ============================================================
@@ -239,30 +239,30 @@ export async function sendNewDemandNotification(p: {
   destination: string; date: Date | string; passengers: number; message?: string;
 }) {
   const html = baseTemplate(`
-    <h2>🔔 Nouvelle demande de réservation</h2>
-    <p>Une nouvelle demande vient d'être soumise via le site web.</p>
+    <h2>Nouvelle demande de reservation</h2>
+    <p>Une nouvelle demande vient d'etre soumise.</p>
     <div class="box">
-      <div class="row"><span class="lbl">Client</span><span class="val">👤 ${p.clientName}</span></div>
-      <div class="row"><span class="lbl">Date souhaitée</span><span class="val">${fmtDate(p.date)}</span></div>
-      <div class="row"><span class="lbl">Départ</span><span class="val">📍 ${p.origin}</span></div>
-      <div class="row"><span class="lbl">Destination</span><span class="val">🏁 ${p.destination}</span></div>
+      <div class="row"><span class="lbl">Client</span><span class="val">${p.clientName}</span></div>
+      <div class="row"><span class="lbl">Date souhaitee</span><span class="val">${fmtDate(p.date)}</span></div>
+      <div class="row"><span class="lbl">Depart</span><span class="val">${p.origin}</span></div>
+      <div class="row"><span class="lbl">Destination</span><span class="val">${p.destination}</span></div>
       <div class="row"><span class="lbl">Passagers</span><span class="val">${p.passengers} personne(s)</span></div>
       ${p.message ? `<div class="row"><span class="lbl">Message</span><span class="val">${p.message}</span></div>` : ''}
     </div>
-    <a href="${APP_URL}/demands" class="btn">Voir la demande →</a>
+    <a href="${APP_URL}/demands" class="btn">Voir la demande</a>
     <p style="color:#666;font-size:13px">Connectez-vous au back-office pour traiter cette demande.</p>
   `);
-  return sendEmail(p.adminEmail, `🔔 Nouvelle demande - ${p.clientName}`, html);
+  return sendEmail(p.adminEmail, `Nouvelle demande - ${p.clientName}`, html);
 }
 
 // Compatibilité avec l'ancien code
 export { sendNewDemandNotification as notifyNewDemand };
 export const EMAIL_TEMPLATES = {};
 export async function sendEmailNotification(n: any): Promise<boolean> {
-  console.log(`[Email] ${n.subject} → ${n.to}`);
+  console.log(`[Email] ${n.subject} -> ${n.to}`);
   return false;
 }
-export async function notifyMissionCompleted(email: string, m: any) { return false; }
-export async function notifyPaymentReceived(email: string, p: any) { return false; }
-export async function notifyChauffeurAssigned(email: string, a: any) { return false; }
-export async function notifyReviewRequest(email: string, r: any) { return false; }
+export async function notifyMissionCompleted(_email: string, _m: any) { return false; }
+export async function notifyPaymentReceived(_email: string, _p: any) { return false; }
+export async function notifyChauffeurAssigned(_email: string, _a: any) { return false; }
+export async function notifyReviewRequest(_email: string, _r: any) { return false; }
